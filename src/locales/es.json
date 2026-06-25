@@ -27,6 +27,7 @@
     "validate-password-title": "Las contraseñas no coinciden",
     "validate-password": "Las contraseñas no coinciden.",
     "account-created": "¡Cuenta creada con éxito!",
+    "error-creating-account": "No se pudo crear la cuenta. Verifica los datos e inténtalo de nuevo.",
     "welcome-back": "Bienvenido de nuevo",
     "subtitle": "Introduce tus datos personales para usar todas las funciones de la plataforma",
     "select-role": "Selecciona un rol",

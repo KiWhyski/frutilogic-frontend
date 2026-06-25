@@ -47,7 +47,7 @@ const routes = [
     },
     {
         path: '/sign-up',
-        name: 'sing-up',
+        name: 'sign-up',
         component: RegisterComponent
     },
     {

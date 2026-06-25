@@ -97,8 +97,21 @@ export const useAuthenticationStore = defineStore('authentication',{
          * This action is called when the application starts to restore the authentication state.
          */
         initializeFromStorage() {
+            if (!isFrontendOnly()) {
+                const token = localStorage.getItem('token');
+                if (token === LOCAL_PREVIEW_TOKEN || localStorage.getItem('devBypassAuth') === 'true') {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('accountId');
+                    localStorage.removeItem('userId');
+                    localStorage.removeItem('username');
+                    localStorage.removeItem('accountRole');
+                    localStorage.removeItem('currentAccount');
+                    localStorage.removeItem('currentUser');
+                    localStorage.removeItem('devBypassAuth');
+                }
+            }
+
             const token = localStorage.getItem('token');
-            const accountId = localStorage.getItem('accountId');
             const userId = localStorage.getItem('userId');
             const username = localStorage.getItem('username');
 
@@ -108,10 +121,12 @@ export const useAuthenticationStore = defineStore('authentication',{
         },
 
         /**
-         * Sign in with mock storage so the UI works without a running API (e.g. Register).
-         * Works in dev, vite preview, and production builds so you can demo the shell.
+         * Solo disponible en modo mock local (VITE_FRONTEND_ONLY=true).
          */
         enterLocalPreview(router) {
+            if (!isFrontendOnly()) {
+                return;
+            }
             const token = LOCAL_PREVIEW_TOKEN;
             const accountId = '00000000-0000-0000-0000-000000000001';
             const userId = '0';
@@ -195,33 +210,18 @@ export const useAuthenticationStore = defineStore('authentication',{
 
             } catch (error) {
                 console.error("❌ Sign-in error:", error);
-                router.push({ name: 'sign-in' });
+                throw error;
             }
         },
-        async signUp(signUpdRequest, router) {
-            /**
-             * Action to sign-up
-             * @summary
-             * This action calls the sign-up API.
-             * If sign-up is successful, it redirects to the sign-in page.
-             * If sign-up fails, it redirects to the sign-up page.
-             * @param signUpdRequest - The {@link SignUpRequest} object to sign-up
-             * @param router - Vue router instance
-             */
-            if (isFrontendOnly()) {
+        async signUp(signUpRequest, router) {
+            try {
+                const response = await authenticationService.signUp(signUpRequest);
                 router.push({ name: 'sign-in' });
-                return Promise.resolve();
+                return new SignUpResponse(response.data?.message ?? 'Account created');
+            } catch (error) {
+                console.error('Sign-up error:', error);
+                throw error;
             }
-            authenticationService.signUp(signUpdRequest)
-                .then(response => {
-                    let signUpResponse = new SignUpResponse(response.data.message);
-                    router.push({ name: 'sign-in' });
-                    console.log(signUpResponse);
-                })
-                .catch(error => {
-                    console.log(error);
-                    router.push({ name: 'sign-up' });
-                });
         },
         /**
          * Action to sign-out

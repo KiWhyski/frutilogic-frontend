@@ -39,6 +39,11 @@ export default {
       this.error = '';
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+      if (!this.formData.role) {
+        this.toast.add({ severity: 'warn', summary: this.$t('toast.error'), detail: this.$t('sign-up.select-role'), life: 3000 });
+        return;
+      }
+
       if (!emailRegex.test(this.formData.username)) {
         this.toast.add({ severity: 'error', summary: this.$t('sign-up.invalid-email-title'), detail: this.$t('sign-up.invalid-email'), life: 3000 });
         return;
@@ -51,23 +56,24 @@ export default {
 
       this.loading = true;
 
-      try {
-        let signUpRequest = new SignUpRequest(
-            this.formData.username,
-            this.formData.password,
-            this.formData.confirmPassword,
-            this.formData.fullName,
-            this.formData.role
-        );
-        this.authenticationStore.signUp(signUpRequest, this.$router);
+      const signUpRequest = new SignUpRequest(
+          this.formData.username,
+          this.formData.password,
+          this.formData.confirmPassword,
+          this.formData.fullName,
+          this.formData.role
+      );
 
-        this.toast.add({ severity: 'success', summary: this.$t('toast.success'), detail: this.$t('sign-up.account-created'), life: 3000 });
-
-      } catch (err) {
-        console.error(err);
-      } finally {
-        this.loading = false;
-      }
+      this.authenticationStore.signUp(signUpRequest, this.$router)
+          .then(() => {
+            this.toast.add({ severity: 'success', summary: this.$t('toast.success'), detail: this.$t('sign-up.account-created'), life: 3000 });
+          })
+          .catch(() => {
+            this.toast.add({ severity: 'error', summary: this.$t('toast.error'), detail: this.$t('sign-up.error-creating-account'), life: 3000 });
+          })
+          .finally(() => {
+            this.loading = false;
+          });
     }
   }
 }

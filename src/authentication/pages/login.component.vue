@@ -19,14 +19,8 @@ export default {
     }
   },
   methods: {
-    goToConfirmation() {
-    },
     goToRegister() {
-      this.authenticationStore.enterLocalPreview(this.$router);
-    },
-    /** Same preview as Register — useful if you use Sign In with the API down. */
-    enterWithoutBackend() {
-      this.authenticationStore.enterLocalPreview(this.$router);
+      this.$router.push({ name: 'sign-up' });
     },
     goToPasswordRecovery() {
       this.$router.push('/password-recovery');
@@ -34,10 +28,20 @@ export default {
     togglePassword() {
       this.hide = !this.hide;
     },
-    onSignIn() {
-      let signUpRequest = new SignInRequest(this.username, this.password);
+    async onSignIn() {
+      if (!this.username?.trim() || !this.password) {
+        this.toast.add({
+          severity: 'warn',
+          summary: this.$t('toast.error'),
+          detail: this.$t('sign-in.invalid-credentials'),
+          life: 3000
+        });
+        return;
+      }
+
+      const signInRequest = new SignInRequest(this.username.trim(), this.password);
       try {
-        this.authenticationStore.signIn(signUpRequest, this.$router);
+        await this.authenticationStore.signIn(signInRequest, this.$router);
       } catch (error) {
         this.toast.add({
           severity: 'error',
@@ -48,7 +52,6 @@ export default {
         console.error('Error to enter the system:', error);
       }
     }
-
   }
 }
 </script>
@@ -66,7 +69,7 @@ export default {
     <!-- Login Section -->
     <div class="login-section">
       <h2>{{ $t('sign-in.title') }}</h2>
-      <form @submit.prevent="goToConfirmation">
+      <form @submit.prevent="onSignIn">
         <div class="form-group">
           <label for="username">{{ $t('sign-in.email') }}</label>
           <input
@@ -109,7 +112,7 @@ export default {
           </label>
         </div>
 
-        <button type="submit" class="sign-in-button" @click="onSignIn">
+        <button type="submit" class="sign-in-button">
           {{ $t('sign-in.signIn') }}
         </button>
 
@@ -121,13 +124,6 @@ export default {
           <span class="register-row__hint">¿Nuevo aquí?</span>
           <button type="button" class="register-row__link" @click="goToRegister">
             Crear cuenta
-          </button>
-        </p>
-
-        <p class="local-preview-row">
-          <button type="button" class="local-preview-link" @click="enterWithoutBackend">
-            <i class="pi pi-external-link local-preview-link__icon" aria-hidden="true"></i>
-            Explorar la app sin servidor
           </button>
         </p>
 

@@ -1,4 +1,4 @@
-import {useAuthenticationStore, LOCAL_PREVIEW_TOKEN} from "./authentication.store.js";
+import {useAuthenticationStore} from "./authentication.store.js";
 import { isFrontendOnly } from "@/shared/config/frontend-only.js";
 
 /**
@@ -21,10 +21,7 @@ export const authenticationGuard = async (to, from, next) => {
     if (isAnonymous && routeRequiresToBeAuthenticated) return next({ name: 'sign-in'});
 
     const accountId = authenticationStore.currentAccountId;
-    const skipAccountStatusCheck =
-        isFrontendOnly() ||
-        localStorage.getItem('devBypassAuth') === 'true' ||
-        localStorage.getItem('token') === LOCAL_PREVIEW_TOKEN;
+    const skipAccountStatusCheck = isFrontendOnly();
 
     if (!isAnonymous && !routeIsPublic && to.name !== 'PlanChoose' && !skipAccountStatusCheck) {
         try {

@@ -18,6 +18,8 @@
     "validate-password-title": "Password Mismatch",
     "validate-password": "Passwords do not match.",
     "account-created": "Account created successfully!",
+    "error-creating-account": "Could not create the account. Check your details and try again.",
+    "select-role": "Select a role",
     "role-liquor": "Fruit store owner"
   },
   "toolbar": {
