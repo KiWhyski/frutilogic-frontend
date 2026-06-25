@@ -13,7 +13,7 @@ export function getBackendBaseUrl() {
   }
   const h = window.location.hostname;
   if (h === 'localhost' || h === '127.0.0.1') {
-    return 'http://localhost:3000';
+    return 'http://localhost:5283/api/v1';
   }
   return '';
 }

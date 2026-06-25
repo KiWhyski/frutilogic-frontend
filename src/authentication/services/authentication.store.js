@@ -150,7 +150,15 @@ export const useAuthenticationStore = defineStore('authentication',{
         async signIn(signInRequest, router) {
             try {
                 const response = await authenticationService.signIn(signInRequest);
-                const { id, username, token, accountId, accountRole } = response.data;
+                const data = response.data;
+                const id = data.id ?? data.userId;
+                const username = data.username ?? data.email;
+                const { token, accountId } = data;
+                let accountRole = data.accountRole;
+
+                if (!accountRole && accountId) {
+                    accountRole = await authenticationService.fetchAccountRole(accountId);
+                }
 
                 const signInResponse = new SignInResponse(id, username, token, accountId);
 

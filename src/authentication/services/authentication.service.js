@@ -1,5 +1,10 @@
 import httpInstance from "@/shared/services/http.instance.js";
 
+function mapAccountRole(role) {
+    if (role === 'LiquorStoreOwner') return 'Liquor Store Owner';
+    return role;
+}
+
 /**
  * Service class to call authentication APIs
  * @summary
@@ -15,8 +20,10 @@ export class AuthenticationService
      *
      */
     signIn(signInRequest) {
-        console.log("🚀 signInRequest", signInRequest);
-        return httpInstance.post(import.meta.env.VITE_AUTH_SIGNIN_ENDPOINT, signInRequest);
+        return httpInstance.post(import.meta.env.VITE_AUTH_SIGNIN_ENDPOINT, {
+            email: signInRequest.username ?? signInRequest.email,
+            password: signInRequest.password,
+        });
     }
 
     /**
@@ -25,18 +32,24 @@ export class AuthenticationService
      * @returns {Promise<httpInstance.AxiosResponse<SignUpResponse>>} - Response from the API
      */
     signUp(signUpRequest) {
-        return httpInstance.post(import.meta.env.VITE_AUTH_SIGNUP_ENDPOINT, signUpRequest);
+        return httpInstance.post(import.meta.env.VITE_AUTH_SIGNUP_ENDPOINT, {
+            email: signUpRequest.username,
+            password: signUpRequest.password,
+            name: signUpRequest.businessName,
+            businessName: signUpRequest.businessName,
+            role: signUpRequest.accountRole,
+        });
     }
 
     async sendRecoveryCode(username) {
-        return httpInstance.post(import.meta.env.VITE_SEND_RECOVERY_CODE_ENDPOINT, { username });
+        return httpInstance.post(import.meta.env.VITE_SEND_RECOVERY_CODE_ENDPOINT, { email: username });
     }
 
     async verifyRecoveryCode(username, recoveryCode) {
         try {
             const response = await httpInstance.post(import.meta.env.VITE_VERIFY_RECOVERY_CODE_ENDPOINT, {
-                username,
-                recoveryCode
+                email: username,
+                code: recoveryCode,
             });
             return response.data;
         } catch (error) {
@@ -47,9 +60,9 @@ export class AuthenticationService
 
     async resetPassword(username, newPassword) {
         try {
-            const response = await httpInstance.post(import.meta.env.VITE_RESET_PASSWORD_ENDPOINT, {
-                username,
-                newPassword
+            const response = await httpInstance.put(import.meta.env.VITE_RESET_PASSWORD_ENDPOINT, {
+                email: username,
+                newPassword,
             });
             return response.data;
         } catch (error) {
@@ -57,4 +70,11 @@ export class AuthenticationService
             throw error;
         }
     }
+
+    async fetchAccountRole(accountId) {
+        const response = await httpInstance.get(`accounts/${accountId}`);
+        return mapAccountRole(response.data?.role);
+    }
 }
+
+export { mapAccountRole };
