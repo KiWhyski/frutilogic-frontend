@@ -1,4 +1,5 @@
 import httpInstance from "@/shared/services/http.instance.js";
+import { normalizeApiPath } from "@/shared/config/backend-url.js";
 
 function mapAccountRole(role) {
     if (role === 'LiquorStoreOwner') return 'Liquor Store Owner';
@@ -20,7 +21,7 @@ export class AuthenticationService
      *
      */
     signIn(signInRequest) {
-        return httpInstance.post(import.meta.env.VITE_AUTH_SIGNIN_ENDPOINT, {
+        return httpInstance.post(normalizeApiPath(import.meta.env.VITE_AUTH_SIGNIN_ENDPOINT || 'sign-in'), {
             email: signInRequest.username ?? signInRequest.email,
             password: signInRequest.password,
         });
@@ -32,7 +33,7 @@ export class AuthenticationService
      * @returns {Promise<httpInstance.AxiosResponse<SignUpResponse>>} - Response from the API
      */
     signUp(signUpRequest) {
-        return httpInstance.post(import.meta.env.VITE_AUTH_SIGNUP_ENDPOINT, {
+        return httpInstance.post(normalizeApiPath(import.meta.env.VITE_AUTH_SIGNUP_ENDPOINT || 'sign-up'), {
             email: signUpRequest.username,
             password: signUpRequest.password,
             name: signUpRequest.businessName,

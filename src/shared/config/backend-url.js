@@ -1,19 +1,58 @@
+const PRODUCTION_API_ORIGIN = "https://frutilogic-platform-api-production.up.railway.app";
+const API_VERSION_PATH = "/api/v1";
+
+function ensureApiV1Base(url) {
+  const trimmed = String(url).trim().replace(/\/+$/, "");
+  if (trimmed.endsWith("/api/v1")) {
+    return trimmed;
+  }
+  if (trimmed.endsWith("/api")) {
+    return `${trimmed}/v1`;
+  }
+  return `${trimmed}${API_VERSION_PATH}`;
+}
+
 /**
- * URL base del backend. En producción (Vercel) debe definirse VITE_API_BASE_URL.
- * Nunca se usa http://localhost:3000 desde un origen HTTPS público: el navegador
- * puede mostrar avisos de “red local” / permisos (Private Network Access).
+ * URL base del backend sin barra final (ej. .../api/v1).
  */
 export function getBackendBaseUrl() {
-  const fromEnv = import.meta.env.VITE_API_BASE_URL;
-  if (fromEnv != null && String(fromEnv).trim() !== '') {
-    return String(fromEnv).replace(/\/$/, '');
+  const candidates = [
+    import.meta.env.VITE_API_BASE_URL,
+    import.meta.env.VITE_API_URL,
+    import.meta.env.VITE_BASE_API_URL,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate != null && String(candidate).trim() !== "") {
+      return ensureApiV1Base(candidate);
+    }
   }
-  if (typeof window === 'undefined') {
-    return '';
+
+  if (import.meta.env.PROD) {
+    return `${PRODUCTION_API_ORIGIN}${API_VERSION_PATH}`;
   }
-  const h = window.location.hostname;
-  if (h === 'localhost' || h === '127.0.0.1') {
-    return 'http://localhost:5283/api/v1';
+
+  if (typeof window !== "undefined") {
+    const h = window.location.hostname;
+    if (h === "localhost" || h === "127.0.0.1") {
+      return `http://localhost:5283${API_VERSION_PATH}`;
+    }
   }
-  return '';
+
+  return "";
+}
+
+/**
+ * Rutas relativas para axios (sin / al inicio).
+ */
+export function normalizeApiPath(path) {
+  return String(path ?? "").replace(/^\/+/, "");
+}
+
+/**
+ * URL base con barra final para axios (ej. .../api/v1/).
+ */
+export function getApiBaseUrlWithSlash() {
+  const base = getBackendBaseUrl();
+  return base ? `${base}/` : "";
 }
