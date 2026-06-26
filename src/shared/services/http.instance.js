@@ -7,20 +7,36 @@ import {authenticationInterceptor} from "@/authentication/services/authenticatio
 import { isFrontendOnly } from "@/shared/config/frontend-only.js";
 import { resolveFrontendMockPayload } from "@/shared/services/http.frontend-mock.js";
 
+const PRODUCTION_API_BASE = "https://frutilogic-platform-api-production.up.railway.app/api/v1/";
+
+function resolveApiBaseUrl() {
+  const fromBase = import.meta.env.VITE_BASE_API_URL;
+  if (fromBase != null && String(fromBase).trim() !== "") {
+    return String(fromBase).trim().replace(/\/?$/, "/");
+  }
+
+  const fromApi = import.meta.env.VITE_API_URL;
+  if (fromApi != null && String(fromApi).trim() !== "") {
+    return `${String(fromApi).trim().replace(/\/$/, "")}/`;
+  }
+
+  if (import.meta.env.PROD) {
+    console.warn("[http] VITE_BASE_API_URL no definida; usando API de producción por defecto.");
+    return PRODUCTION_API_BASE;
+  }
+
+  return "http://localhost:5283/api/v1/";
+}
+
 /**
  * Configured axios instance for making HTTP requests
  * @const {import('axios').AxiosInstance}
- * @description Creates a pre-configured axios instance with base URL and default headers
- * @property {string} baseURL - The base URL for all requests from environment variable
- * @property {Object} headers - Default headers for all requests
- * @property {string} headers.Content-Type - Sets JSON as the default content type
  */
 const httpInstance = axios.create({
-    baseURL: import.meta.env.VITE_BASE_API_URL,
+    baseURL: resolveApiBaseUrl(),
     headers: { 'Content-Type': 'application/json' },
 });
 
-// Add request interceptor to add authentication token
 httpInstance.interceptors.request.use(authenticationInterceptor);
 
 if (isFrontendOnly()) {
