@@ -36,8 +36,8 @@ export class AuthenticationService
         return httpInstance.post(normalizeApiPath(import.meta.env.VITE_AUTH_SIGNUP_ENDPOINT || 'sign-up'), {
             email: signUpRequest.username,
             password: signUpRequest.password,
-            name: signUpRequest.businessName,
-            businessName: signUpRequest.businessName,
+            name: signUpRequest.name ?? signUpRequest.businessName,
+            businessName: signUpRequest.businessName ?? signUpRequest.name,
             role: signUpRequest.accountRole,
         });
     }

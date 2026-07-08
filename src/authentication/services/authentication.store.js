@@ -1,6 +1,5 @@
 import {AuthenticationService} from "./authentication.service.js";
 import {defineStore} from "pinia";
-import {SignInResponse} from "../model/sign-in.response.js";
 import {SignUpResponse} from "../model/sign-up.response.js";
 import { AccountService } from "@/payment-and-subscriptions/services/account.service.js";
 import { isFrontendOnly } from "@/shared/config/frontend-only.js";
@@ -97,21 +96,22 @@ export const useAuthenticationStore = defineStore('authentication',{
          * This action is called when the application starts to restore the authentication state.
          */
         initializeFromStorage() {
-            if (!isFrontendOnly()) {
-                const token = localStorage.getItem('token');
-                if (token === LOCAL_PREVIEW_TOKEN || localStorage.getItem('devBypassAuth') === 'true') {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('accountId');
-                    localStorage.removeItem('userId');
-                    localStorage.removeItem('username');
-                    localStorage.removeItem('accountRole');
-                    localStorage.removeItem('currentAccount');
-                    localStorage.removeItem('currentUser');
-                    localStorage.removeItem('devBypassAuth');
-                }
+            const token = localStorage.getItem('token');
+            if (token === LOCAL_PREVIEW_TOKEN || localStorage.getItem('devBypassAuth') === 'true') {
+                localStorage.removeItem('token');
+                localStorage.removeItem('accountId');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('username');
+                localStorage.removeItem('accountRole');
+                localStorage.removeItem('currentAccount');
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('devBypassAuth');
+                this.signedIn = false;
+                this.userId = '';
+                this.username = '';
+                return;
             }
 
-            const token = localStorage.getItem('token');
             const userId = localStorage.getItem('userId');
             const username = localStorage.getItem('username');
 
@@ -168,54 +168,70 @@ export const useAuthenticationStore = defineStore('authentication',{
                 const data = response.data;
                 const id = data.id ?? data.userId;
                 const username = data.username ?? data.email;
-                const { token, accountId } = data;
-                let accountRole = data.accountRole;
+                const token = data.token;
+                const accountId = data.accountId ?? '';
 
-                if (!accountRole && accountId) {
-                    accountRole = await authenticationService.fetchAccountRole(accountId);
+                if (!token) {
+                    throw new Error('No authentication token received');
                 }
 
-                const signInResponse = new SignInResponse(id, username, token, accountId);
-
-                this.signedIn = true;
-                this.userId = signInResponse.id;
-                this.username = signInResponse.username;
-
+                // Persist session before any authenticated follow-up requests
                 localStorage.setItem('token', token);
-                localStorage.setItem('accountId', accountId);
                 localStorage.setItem('userId', id);
                 localStorage.setItem('username', username);
-                localStorage.setItem('accountRole', accountRole);
+                if (accountId) {
+                    localStorage.setItem('accountId', accountId);
+                }
 
-                const currentAccount = {
+                this.signedIn = true;
+                this.userId = id;
+                this.username = username;
+
+                let accountRole = data.accountRole;
+                if (!accountRole && accountId) {
+                    try {
+                        accountRole = await authenticationService.fetchAccountRole(accountId);
+                    } catch (roleError) {
+                        console.warn('Could not fetch account role:', roleError);
+                    }
+                }
+                if (accountRole) {
+                    localStorage.setItem('accountRole', accountRole);
+                }
+
+                localStorage.setItem('currentAccount', JSON.stringify({
                     accountId,
                     accountRole,
-                    username
-                };
-                localStorage.setItem('currentAccount', JSON.stringify(currentAccount));
+                    username,
+                }));
 
-                if (isFrontendOnly()) {
-                    setDemoUserForGuards(username);
-                }
-
-                const accountService = new AccountService();
                 let accountStatus = 'ACTIVE';
                 try {
-                    const statusResponse = await accountService.getAccountStatus(accountId);
-                    accountStatus = statusResponse?.accountStatus ?? 'ACTIVE';
-                    console.log("? Account Status:", accountStatus);
+                    if (accountId) {
+                        const accountService = new AccountService();
+                        const statusResponse = await accountService.getAccountStatus(accountId);
+                        accountStatus = statusResponse?.accountStatus ?? 'ACTIVE';
+                    }
                 } catch (statusError) {
-                    console.warn("Could not fetch account status, continuing:", statusError);
+                    console.warn('Could not fetch account status, continuing:', statusError);
                 }
 
-                if (String(accountStatus).toUpperCase() === "INACTIVE") {
-                    router.push({ name: "PlanChoose" });
+                if (String(accountStatus).toUpperCase() === 'INACTIVE') {
+                    router.push({ name: 'PlanChoose' });
                 } else {
-                    router.push({ name: "Dashboard" });
+                    router.push({ name: 'Dashboard' });
                 }
-
             } catch (error) {
-                console.error("? Sign-in error:", error);
+                this.signedIn = false;
+                this.userId = '';
+                this.username = '';
+                localStorage.removeItem('token');
+                localStorage.removeItem('accountId');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('username');
+                localStorage.removeItem('accountRole');
+                localStorage.removeItem('currentAccount');
+                console.error('Sign-in error:', error);
                 throw error;
             }
         },
