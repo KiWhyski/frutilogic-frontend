@@ -1,7 +1,11 @@
 /**
  * Modo solo-frontend: sin backend real (axios mock, login simulado, etc.).
- * Por defecto está activo; desactívalo con VITE_FRONTEND_ONLY=false (p. ej. contra API real).
+ * En producción solo se activa si VITE_FRONTEND_ONLY=true explícitamente.
  */
 export function isFrontendOnly() {
-  return import.meta.env.VITE_FRONTEND_ONLY !== 'false';
+  const flag = import.meta.env.VITE_FRONTEND_ONLY;
+  if (import.meta.env.PROD) {
+    return flag === 'true';
+  }
+  return flag !== 'false';
 }

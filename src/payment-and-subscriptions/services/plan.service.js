@@ -17,9 +17,8 @@ export class PlanService extends BaseService {
     }
 
     async getCurrentPlan(accountId) {
-        const endpoint = accountCurrentPlanEndpoint.replace('{accountId}', accountId);
-        const response = await httpInstance.get(endpoint);
+        const response = await httpInstance.get(`accounts/${accountId}/subscriptions`);
         console.log("📦 Current plan:", response.data);
-        return response.data;
+        return response.data?.planType ?? response.data;
     }
 }

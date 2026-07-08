@@ -199,17 +199,23 @@ export const useAuthenticationStore = defineStore('authentication',{
                 }
 
                 const accountService = new AccountService();
-                const { accountStatus } = await accountService.getAccountStatus(accountId);
-                console.log("✅ Account Status:", accountStatus);
+                let accountStatus = 'ACTIVE';
+                try {
+                    const statusResponse = await accountService.getAccountStatus(accountId);
+                    accountStatus = statusResponse?.accountStatus ?? 'ACTIVE';
+                    console.log("? Account Status:", accountStatus);
+                } catch (statusError) {
+                    console.warn("Could not fetch account status, continuing:", statusError);
+                }
 
-                if (accountStatus === "INACTIVE") {
+                if (String(accountStatus).toUpperCase() === "INACTIVE") {
                     router.push({ name: "PlanChoose" });
                 } else {
                     router.push({ name: "Dashboard" });
                 }
 
             } catch (error) {
-                console.error("❌ Sign-in error:", error);
+                console.error("? Sign-in error:", error);
                 throw error;
             }
         },

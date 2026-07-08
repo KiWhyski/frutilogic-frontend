@@ -43,6 +43,17 @@ export function getBackendBaseUrl() {
 }
 
 /**
+ * Une base y path evitando barras duplicadas.
+ */
+export function joinApiPath(base, path) {
+  const normalizedBase = String(base ?? "").trim().replace(/\/+$/, "");
+  const normalizedPath = String(path ?? "").trim().replace(/^\/+/, "");
+  if (!normalizedBase) return normalizedPath;
+  if (!normalizedPath) return normalizedBase;
+  return `${normalizedBase}/${normalizedPath}`;
+}
+
+/**
  * Rutas relativas para axios (sin / al inicio).
  */
 export function normalizeApiPath(path) {
