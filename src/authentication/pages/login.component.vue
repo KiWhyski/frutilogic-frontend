@@ -2,6 +2,7 @@
 
 import {useAuthenticationStore} from "@/authentication/services/authentication.store.js";
 import {SignInRequest} from "@/authentication/model/sign-in.request.js";
+import { extractErrorMessage } from "@/authentication/services/authentication.service.js";
 import {Toast as PvToast} from "primevue";
 import {useToast} from "primevue/usetoast";
 export default {
@@ -46,8 +47,8 @@ export default {
         this.toast.add({
           severity: 'error',
           summary: this.$t('toast.error'),
-          detail: this.$t('sign-in.invalid-credentials'),
-          life: 3000
+          detail: extractErrorMessage(error),
+          life: 4000
         });
         console.error('Error to enter the system:', error);
       }

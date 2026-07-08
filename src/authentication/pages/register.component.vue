@@ -1,6 +1,7 @@
 <script>
 import {useAuthenticationStore} from "../services/authentication.store.js";
 import {SignUpRequest} from "../model/sign-up.request.js";
+import { extractErrorMessage } from "../services/authentication.service.js";
 import { useToast } from 'primevue/usetoast';
 import {Toast as PvToast} from "primevue";
 
@@ -19,7 +20,7 @@ export default {
         username: "",
         password: "",
         confirmPassword: "",
-        role: ""
+        role: "LiquorStoreOwner"
       },
       toast: useToast(),
     }
@@ -35,7 +36,7 @@ export default {
         this.hideConfirm = !this.hideConfirm;
       }
     },
-    onSignUp() {
+    async onSignUp() {
       this.error = '';
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -44,8 +45,18 @@ export default {
         return;
       }
 
+      if (!this.formData.fullName?.trim()) {
+        this.toast.add({ severity: 'warn', summary: this.$t('toast.error'), detail: 'Ingresa tu nombre completo', life: 3000 });
+        return;
+      }
+
       if (!emailRegex.test(this.formData.username)) {
         this.toast.add({ severity: 'error', summary: this.$t('sign-up.invalid-email-title'), detail: this.$t('sign-up.invalid-email'), life: 3000 });
+        return;
+      }
+
+      if (this.formData.password.length < 8) {
+        this.toast.add({ severity: 'warn', summary: this.$t('toast.error'), detail: 'La contraseña debe tener al menos 8 caracteres', life: 3000 });
         return;
       }
 
@@ -64,16 +75,14 @@ export default {
           this.formData.role
       );
 
-      this.authenticationStore.signUp(signUpRequest, this.$router)
-          .then(() => {
-            this.toast.add({ severity: 'success', summary: this.$t('toast.success'), detail: this.$t('sign-up.account-created'), life: 3000 });
-          })
-          .catch(() => {
-            this.toast.add({ severity: 'error', summary: this.$t('toast.error'), detail: this.$t('sign-up.error-creating-account'), life: 3000 });
-          })
-          .finally(() => {
-            this.loading = false;
-          });
+      try {
+        await this.authenticationStore.signUp(signUpRequest, this.$router);
+        this.toast.add({ severity: 'success', summary: this.$t('toast.success'), detail: 'Cuenta creada. Bienvenido.', life: 3000 });
+      } catch (error) {
+        this.toast.add({ severity: 'error', summary: this.$t('toast.error'), detail: extractErrorMessage(error), life: 4000 });
+      } finally {
+        this.loading = false;
+      }
     }
   }
 }
@@ -104,8 +113,7 @@ export default {
 
         <div class="form-group select-group">
           <label for="role" class="select-label">{{ $t('sign-up.select-your-role') }}</label>
-          <select v-model="formData.role" id="role" class="form-select">
-            <option value="" class="select-role" disabled selected>{{ $t('sign-up.select-role') }}</option>
+          <select v-model="formData.role" id="role" class="form-select" required>
             <option value="LiquorStoreOwner">{{ $t('sign-up.role-liquor') }}</option>
             <option value="Supplier">{{ $t('sign-up.role-supplier') }}</option>
           </select>
@@ -165,7 +173,7 @@ export default {
                 :placeholder="$t('sign-up.placeholder-confirm-reg')"
             />
             <button
-                type="submit"
+                type="button"
                 class="toggle-password"
                 @click="togglePassword('confirm')"
             >
@@ -174,8 +182,8 @@ export default {
           </div>
         </div>
 
-        <button class="register-button" type="submit">
-          {{ $t('sign-up.create-account-button') }}
+        <button class="register-button" type="submit" :disabled="loading">
+          {{ loading ? 'Creando cuenta...' : $t('sign-up.create-account-button') }}
         </button>
 
         <div class="divider">{{ $t('sign-up.divider-or') }}</div>

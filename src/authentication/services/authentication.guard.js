@@ -1,34 +1,26 @@
 import {useAuthenticationStore} from "./authentication.store.js";
 
-/**
- * Guard to check if user is authenticated
- */
+const PUBLIC_ROUTES = new Set([
+    '/sign-in',
+    '/sign-up',
+    '/page-not-found',
+    '/password-recovery',
+    '/reset-password',
+    '/confirmation-code',
+    '/payments-success',
+    '/payments-cancel',
+]);
+
 export const authenticationGuard = async (to, from, next) => {
     const authenticationStore = useAuthenticationStore();
-    const isAnonymous = !authenticationStore.isSignedIn;
-    const publicRoutes = ['/sign-in', '/sign-up', '/page-not-found', '/password-recovery', '/reset-password', '/confirmation-code', '/payments-success', '/payments-cancel', 'payments-upgrade-success'];
-    const routeRequiresToBeAuthenticated = !publicRoutes.includes(to.path);
-    const routeIsPublic = publicRoutes.includes(to.path);
+    const isPublic = PUBLIC_ROUTES.has(to.path);
 
-    if (isAnonymous && routeRequiresToBeAuthenticated) {
+    if (!authenticationStore.isSignedIn && !isPublic) {
         return next({ name: 'sign-in' });
     }
 
-    const accountId = authenticationStore.currentAccountId;
-
-    if (!isAnonymous && !routeIsPublic && to.name !== 'PlanChoose' && accountId) {
-        try {
-            const accountService = new (await import('@/payment-and-subscriptions/services/account.service.js')).AccountService();
-            const { accountStatus } = await accountService.getAccountStatus(accountId);
-
-            if (String(accountStatus).toUpperCase() === 'INACTIVE') {
-                if (from.name !== 'PlanChoose' && to.name !== 'PlanChoose') {
-                    return next({ name: 'PlanChoose' });
-                }
-            }
-        } catch (error) {
-            console.warn('Could not verify account status, allowing navigation:', error);
-        }
+    if (authenticationStore.isSignedIn && (to.name === 'sign-in' || to.name === 'sign-up')) {
+        return next({ name: 'Dashboard' });
     }
 
     return next();

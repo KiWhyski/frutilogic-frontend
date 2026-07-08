@@ -1,274 +1,121 @@
-import {AuthenticationService} from "./authentication.service.js";
-import {defineStore} from "pinia";
-import {SignUpResponse} from "../model/sign-up.response.js";
-import { AccountService } from "@/payment-and-subscriptions/services/account.service.js";
-import { isFrontendOnly } from "@/shared/config/frontend-only.js";
+import { AuthenticationService } from "./authentication.service.js";
+import { defineStore } from "pinia";
+import { parseAuthResponse, persistSession, clearSession, hasValidSession } from "./auth.session.js";
 
 const authenticationService = new AuthenticationService();
 
-/** Perfil demo para guards (catalog/order) que leen userService.getCurrentUserProfile() */
-function setDemoUserForGuards(username) {
-    const email = username || 'demo@local.dev';
-    const profile = {
-        profileId: '0',
-        name: 'Demo',
-        email,
-        role: 'Liquor Store Owner',
-    };
-    const currentUser = {
-        id: '0',
-        profileId: '0',
-        profile,
-        accountId: '00000000-0000-0000-0000-000000000001',
-        account: { accountId: '00000000-0000-0000-0000-000000000001' },
-    };
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-}
-
-/** Token stored for offline / no-backend UI preview (Register button). */
-export const LOCAL_PREVIEW_TOKEN = 'dev-local-preview-token';
-
-/**
- * Store definition for authentication
- * @summary
- * This store is responsible to manage the authentication state.
- * It contains state for signed-in status, user ID, and username.
- * It contains actions to sign-in, sign-up, and sign-out.
- */
-export const useAuthenticationStore = defineStore('authentication',{
-    state: () => ({ signedIn: false, userId: '', username: '' , recoveryEmail: ''}),
+export const useAuthenticationStore = defineStore('authentication', {
+    state: () => ({
+        signedIn: false,
+        userId: '',
+        username: '',
+        recoveryEmail: '',
+    }),
     getters: {
-        /**
-         * Getter to check if user is signed in
-         * @param state - Current state of the store
-         * @returns {boolean} - True if user is signed in, false otherwise
-         */
-        isSignedIn: (state) => state['signedIn'],
-        /**
-         * Getter to get the current user ID
-         * @param state - Current state of the store
-         * @returns {number} - Current user ID
-         */
-        currentUserId: (state) => state['userId'],
-        /**
-         * Getter to get the current username
-         * @param state - Current state of the store
-         * @returns {string} - Current username
-         */
-        currentUsername: (state) => state['username'],
-        /**
-         * Getter to get the current token
-         * @returns {string} - Current token
-         */
+        isSignedIn: (state) => state.signedIn,
+        currentUserId: (state) => state.userId,
+        currentUsername: (state) => state.username,
         currentToken: () => localStorage.getItem('token'),
-
-        /**
-         * Getter to get the current account ID
-         * @returns {string} - Current account ID from local storage
-         */
         currentAccountId: () => localStorage.getItem('accountId'),
-
-        /**
-         * Getter to get the current account role
-         * @returns {string} - Current email to recover the account
-         */
         currentRecoveryEmail: () => localStorage.getItem('recoveryEmail'),
-
         account: () => {
             const accountId = localStorage.getItem('accountId');
             const accountRole = localStorage.getItem('accountRole');
-            if (accountId && accountRole) {
-                return {
-                    accountId,
-                    accountRole
-                };
-            }
-            return null;
-        }
+            if (!accountId) return null;
+            return { accountId, accountRole };
+        },
     },
     actions: {
-        /**
-         * Initialize the store from local storage
-         * @summary
-         * This action checks local storage for a token and sets the signed-in status accordingly.
-         * It also retrieves the user ID and username from local storage.
-         * @description
-         * This action is called when the application starts to restore the authentication state.
-         */
         initializeFromStorage() {
             const token = localStorage.getItem('token');
-            if (token === LOCAL_PREVIEW_TOKEN || localStorage.getItem('devBypassAuth') === 'true') {
-                localStorage.removeItem('token');
-                localStorage.removeItem('accountId');
-                localStorage.removeItem('userId');
-                localStorage.removeItem('username');
-                localStorage.removeItem('accountRole');
-                localStorage.removeItem('currentAccount');
-                localStorage.removeItem('currentUser');
-                localStorage.removeItem('devBypassAuth');
+            if (token === 'dev-local-preview-token' || localStorage.getItem('devBypassAuth') === 'true') {
+                clearSession();
                 this.signedIn = false;
                 this.userId = '';
                 this.username = '';
                 return;
             }
 
-            const userId = localStorage.getItem('userId');
-            const username = localStorage.getItem('username');
-
-            this.signedIn = !!token;
-            this.userId = userId || '';
-            this.username = username || '';
-        },
-
-        /**
-         * Solo disponible en modo mock local (VITE_FRONTEND_ONLY=true).
-         */
-        enterLocalPreview(router) {
-            if (!isFrontendOnly()) {
+            if (!hasValidSession()) {
+                this.signedIn = false;
+                this.userId = '';
+                this.username = '';
                 return;
             }
-            const token = LOCAL_PREVIEW_TOKEN;
-            const accountId = '00000000-0000-0000-0000-000000000001';
-            const userId = '0';
-            const username = 'demo@local.dev';
-            const accountRole = 'LiquorStoreOwner';
 
             this.signedIn = true;
-            this.userId = userId;
-            this.username = username;
-
-            localStorage.setItem('token', token);
-            localStorage.setItem('accountId', accountId);
-            localStorage.setItem('userId', userId);
-            localStorage.setItem('username', username);
-            localStorage.setItem('accountRole', accountRole);
-            localStorage.setItem('devBypassAuth', 'true');
-            localStorage.setItem(
-                'currentAccount',
-                JSON.stringify({ accountId, accountRole, username })
-            );
-
-            setDemoUserForGuards(username);
-
-            router.push({ name: 'Dashboard' });
+            this.userId = localStorage.getItem('userId') || '';
+            this.username = localStorage.getItem('username') || '';
         },
-        /**
-         * Action to sign-in
-         * @summary
-         * This action calls the sign-in API and updates the store state.
-         * If sign-in is successful, it sets the signed-in status, user ID, and username.
-         * It also saves the token in local storage.
-         * If sign-in fails, it redirects to the sign-in page.
-         * @param signInRequest - The {@link SignInRequest} object to sign-in
-         * @param router - Vue router instance
-         */
+
+        applySession(session) {
+            persistSession(session);
+            this.signedIn = true;
+            this.userId = session.id;
+            this.username = session.username;
+        },
+
         async signIn(signInRequest, router) {
             try {
-                const response = await authenticationService.signIn(signInRequest);
-                const data = response.data;
-                const id = data.id ?? data.userId;
-                const username = data.username ?? data.email;
-                const token = data.token;
-                const accountId = data.accountId ?? '';
+                const response = await authenticationService.signIn(
+                    signInRequest.username ?? signInRequest.email,
+                    signInRequest.password
+                );
 
-                if (!token) {
-                    throw new Error('No authentication token received');
+                const session = parseAuthResponse(response.data);
+                if (!session.token) {
+                    throw new Error('El servidor no devolviù un token de sesiùn');
                 }
 
-                // Persist session before any authenticated follow-up requests
-                localStorage.setItem('token', token);
-                localStorage.setItem('userId', id);
-                localStorage.setItem('username', username);
-                if (accountId) {
-                    localStorage.setItem('accountId', accountId);
-                }
-
+                localStorage.setItem('token', session.token);
                 this.signedIn = true;
-                this.userId = id;
-                this.username = username;
 
-                let accountRole = data.accountRole;
-                if (!accountRole && accountId) {
-                    try {
-                        accountRole = await authenticationService.fetchAccountRole(accountId);
-                    } catch (roleError) {
-                        console.warn('Could not fetch account role:', roleError);
+                if (session.accountId) {
+                    await authenticationService.ensureFreePlanActivated(session.accountId);
+                    if (!session.accountRole) {
+                        try {
+                            session.accountRole = await authenticationService.fetchAccountRole(session.accountId);
+                        } catch {
+                            session.accountRole = 'Liquor Store Owner';
+                        }
                     }
                 }
-                if (accountRole) {
-                    localStorage.setItem('accountRole', accountRole);
-                }
 
-                localStorage.setItem('currentAccount', JSON.stringify({
-                    accountId,
-                    accountRole,
-                    username,
-                }));
-
-                let accountStatus = 'ACTIVE';
-                try {
-                    if (accountId) {
-                        const accountService = new AccountService();
-                        const statusResponse = await accountService.getAccountStatus(accountId);
-                        accountStatus = statusResponse?.accountStatus ?? 'ACTIVE';
-                    }
-                } catch (statusError) {
-                    console.warn('Could not fetch account status, continuing:', statusError);
-                }
-
-                if (String(accountStatus).toUpperCase() === 'INACTIVE') {
-                    router.push({ name: 'PlanChoose' });
-                } else {
-                    router.push({ name: 'Dashboard' });
-                }
+                this.applySession(session);
+                await router.push({ name: 'Dashboard' });
             } catch (error) {
+                clearSession();
                 this.signedIn = false;
                 this.userId = '';
                 this.username = '';
-                localStorage.removeItem('token');
-                localStorage.removeItem('accountId');
-                localStorage.removeItem('userId');
-                localStorage.removeItem('username');
-                localStorage.removeItem('accountRole');
-                localStorage.removeItem('currentAccount');
-                console.error('Sign-in error:', error);
                 throw error;
             }
         },
+
         async signUp(signUpRequest, router) {
-            try {
-                const response = await authenticationService.signUp(signUpRequest);
-                router.push({ name: 'sign-in' });
-                return new SignUpResponse(response.data?.message ?? 'Account created');
-            } catch (error) {
-                console.error('Sign-up error:', error);
-                throw error;
-            }
+            await authenticationService.signUp({
+                email: signUpRequest.username,
+                password: signUpRequest.password,
+                name: signUpRequest.name ?? signUpRequest.businessName,
+                businessName: signUpRequest.businessName ?? signUpRequest.name,
+                role: signUpRequest.accountRole,
+            });
+
+            await this.signIn(
+                { username: signUpRequest.username, password: signUpRequest.password },
+                router
+            );
         },
-        /**
-         * Action to sign-out
-         * @summary
-         * This action signs out the user.
-         * It sets the signed-in status to false, user ID to 0, and username to empty string.
-         * It also removes the token from local storage.
-         * It redirects to the sign-in page.
-         * @param router - Vue router instance
-         */
+
         async signOut(router) {
+            clearSession();
             this.signedIn = false;
             this.userId = '';
             this.username = '';
-            localStorage.removeItem('token');
-            localStorage.removeItem('accountId');
-            localStorage.removeItem('userId');
-            localStorage.removeItem('username');
-            localStorage.removeItem('accountRole');
-            localStorage.removeItem('currentAccount');
-            localStorage.removeItem('currentUser');
-            localStorage.removeItem('devBypassAuth');
-            console.log('Signed out');
-            router.push({ name: 'sign-in' });
+            this.recoveryEmail = '';
+            await router.push({ name: 'sign-in' });
         },
+
         setRecoveryEmail(email) {
             this.recoveryEmail = email;
             localStorage.setItem('recoveryEmail', email);
@@ -281,6 +128,6 @@ export const useAuthenticationStore = defineStore('authentication',{
         clearRecoveryEmail() {
             this.recoveryEmail = '';
             localStorage.removeItem('recoveryEmail');
-        }
-    }
+        },
+    },
 });
