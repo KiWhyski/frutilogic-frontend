@@ -24,7 +24,7 @@
       >
         <Column field="name" :header="$t('catalog.name')" />
         <Column field="content" :header="$t('catalog.col-content')">
-          <template #body="{ data }">{{ data.content }}ml</template>
+          <template #body="{ data }">{{ data.content }} kg</template>
         </Column>
         <Column field="productType" :header="$t('catalog.col-type')" />
         <Column field="brand" :header="$t('catalog.brand')" />
@@ -80,43 +80,46 @@ export default {
     }
 
     watch(
-        () => props.catalog?.catalogId,   // ← aquí el cambio importante
+        () => props.catalog?.catalogId ?? props.catalog?.id,
         (catalogId) => loadCatalogItems(catalogId),
         { immediate: true }
     );
 
     async function deleteItem(itemId) {
-      console.log('[CatalogItem] intento de eliminar →', itemId);   // ①
+      const catalogId = props.catalog?.catalogId ?? props.catalog?.id;
+      if (!catalogId || !itemId) return;
 
       if (!confirm('¿Eliminar este producto del catálogo?')) return;
       try {
-        await catalogService.deleteCatalogItem(itemId);
+        await catalogService.deleteCatalogItem(catalogId, itemId);
         catalogItems.value = catalogItems.value.filter(i => i.id !== itemId);
         toast.add({ severity: 'info', summary: 'Producto eliminado', life: 2200 });
       } catch (err) {
-        console.error('[CatalogItem] error al eliminar:', err);     // ②
+        console.error('[CatalogItem] error al eliminar:', err);
         toast.add({ severity: 'error', summary: 'No se pudo eliminar', life: 3000 });
       }
     }
 
     const goToEdit = () => {
-      if (props.catalog?.catalogId) {
-        router.push(`/catalog/edit/${props.catalog.catalogId}`);
+      const catalogId = props.catalog?.catalogId ?? props.catalog?.id;
+      if (catalogId) {
+        router.push(`/catalog/edit/${catalogId}`);
       }
     };
 
     async function onPublish () {
-      if (!props.catalog?.catalogId) return;
+      const catalogId = props.catalog?.catalogId ?? props.catalog?.id;
+      if (!catalogId) return;
 
       const ok = confirm('¿Deseas publicar este catálogo?');
       if (!ok) return;
 
       try {
-        const updated = await catalogService.publishCatalog(props.catalog.catalogId);
+        await catalogService.publishCatalog(catalogId);
         toast.add({ severity: 'success', summary: 'Catálogo publicado', life: 2500 });
-        emits('published', updated);
       } catch (err) {
         console.error('[CatalogItem] error al publicar:', err);
+        toast.add({ severity: 'error', summary: 'No se pudo publicar', life: 3000 });
       }
     }
 

@@ -197,7 +197,7 @@
   "reports": [
     {
       "id": 1,
-      "products": "Vino",
+      "products": "Fruta",
       "type": "destilado",
       "price": 20,
       "amount": 2,
@@ -206,7 +206,7 @@
     },
     {
       "id": 2,
-      "products": "Vino Tinto Malbec",
+      "products": "Mango Kent",
       "type": "Destilado",
       "price": 290,
       "amount": 10,
@@ -215,7 +215,7 @@
     },
     {
       "id": 3,
-      "products": "Vino Blanco",
+      "products": "Manzana Golden",
       "type": "Destilado",
       "price": 92,
       "amount": 12,
@@ -224,8 +224,8 @@
     },
     {
       "id": 4,
-      "products": "Ron Cartavio",
-      "type": "Ron",
+      "products": "Plátano de seda",
+      "type": "Plátano",
       "price": 921,
       "amount": 9,
       "date": "2025/05/13",
@@ -253,60 +253,60 @@
   "products": [
     {
       "id": 1,
-      "name": "Ron Blanco",
-      "brandName": "Cartavio",
-      "liquorType": "Destilado",
-      "unitPriceAmount": 56,
+      "name": "Manzana Red Delicious",
+      "brandName": "Huertos del Sur",
+      "liquorType": "Manzana",
+      "unitPriceAmount": 4.5,
       "minimumStock": 32,
-      "updatedUnitPriceAmount": 56,
+      "updatedUnitPriceAmount": 4.5,
       "updatedMinimumStock": 32
     },
     {
       "id": 2,
-      "name": "Vodka",
-      "brandName": "Absolut",
-      "liquorType": "Vodka",
-      "unitPriceAmount": 45,
+      "name": "Plátano de seda",
+      "brandName": "Valle Fresco",
+      "liquorType": "Plátano",
+      "unitPriceAmount": 3.2,
       "minimumStock": 20,
-      "updatedUnitPriceAmount": 45,
+      "updatedUnitPriceAmount": 3.2,
       "updatedMinimumStock": 20
     },
     {
       "id": 3,
-      "name": "Vino Tinto Malbec",
-      "brandName": "Bodega del Sur",
-      "liquorType": "Vino",
-      "unitPriceAmount": 289,
+      "name": "Mango Kent",
+      "brandName": "Costa Natural",
+      "liquorType": "Mango",
+      "unitPriceAmount": 6.8,
       "minimumStock": 15,
-      "updatedUnitPriceAmount": 289,
+      "updatedUnitPriceAmount": 6.8,
       "updatedMinimumStock": 15
     },
     {
       "id": 4,
-      "name": "Pisco Queirolo",
-      "brandName": "Queirolo",
-      "liquorType": "Pisco",
-      "unitPriceAmount": 67,
+      "name": "Naranja Valencia",
+      "brandName": "AgroAndes",
+      "liquorType": "Naranja",
+      "unitPriceAmount": 2.9,
       "minimumStock": 10,
-      "updatedUnitPriceAmount": 67,
+      "updatedUnitPriceAmount": 2.9,
       "updatedMinimumStock": 10
     },
     {
       "id": 5,
-      "name": "Whisky Jameson",
-      "brandName": "Jameson",
-      "liquorType": "Whisky",
-      "unitPriceAmount": 135,
+      "name": "Palta Hass",
+      "brandName": "EcoCampo",
+      "liquorType": "Palta",
+      "unitPriceAmount": 8.5,
       "minimumStock": 25,
-      "updatedUnitPriceAmount": 135,
+      "updatedUnitPriceAmount": 8.5,
       "updatedMinimumStock": 25,
       "min": 12
     },
     {
-      "name": "Product 1",
-      "brandName": "Brand 1",
-      "liquorType": "Type 1",
-      "unitPriceAmount": 450,
+      "name": "Fresa",
+      "brandName": "Sierra Fruits",
+      "liquorType": "Fresa",
+      "unitPriceAmount": 12,
       "minimumStock": 34,
       "imageUrl": "https://res.cloudinary.com/dshxmkd1v/image/upload/v1750453644/ujair1z0nz3czriix2xg.png",
       "providerId": 3,
@@ -315,27 +315,27 @@
     },
     {
       "id": 9,
-      "name": "Vino Tinto Del Valle",
-      "brandName": "Tabernero",
-      "liquorType": "Destilado",
+      "name": "Uva Red Globe",
+      "brandName": "Fruticultores del Sur",
+      "liquorType": "Uva",
       "imageUrl": "https://res.cloudinary.com/dshxmkd1v/image/upload/v1750454188/pca4x8ab8wqqtfopr7k6.png",
-      "unitPriceAmount": 44.5,
+      "unitPriceAmount": 9.5,
       "minimumStock": 3,
       "providerId": 1,
-      "updatedUnitPriceAmount": 44.5,
+      "updatedUnitPriceAmount": 9.5,
       "updatedMinimumStock": 3,
       "updatedImageUrl": "https://res.cloudinary.com/dshxmkd1v/image/upload/v1750454188/pca4x8ab8wqqtfopr7k6.png"
     },
     {
       "id": 10,
-      "name": "Hola",
-      "brandName": "Ya funciona esta hvda xd",
-      "liquorType": "Liquor",
+      "name": "Piña Golden",
+      "brandName": "Selva Dorada",
+      "liquorType": "Piña",
       "imageUrl": "https://res.cloudinary.com/dshxmkd1v/image/upload/v1750454758/eyksx9zurvhqjttk2cyl.png",
-      "unitPriceAmount": 58,
+      "unitPriceAmount": 5.8,
       "minimumStock": 3,
       "providerId": 3,
-      "updatedUnitPriceAmount": 58,
+      "updatedUnitPriceAmount": 5.8,
       "updatedMinimumStock": 3,
       "updatedImageUrl": "https://res.cloudinary.com/dshxmkd1v/image/upload/v1750454758/eyksx9zurvhqjttk2cyl.png"
     }
@@ -348,50 +348,50 @@
   ],
   "conservation": [
     {
-      "name": "Ron Cartavio",
-      "type": "Ron",
+      "name": "Plátano de seda",
+      "type": "Plátano",
       "imageUrl": "https://res.cloudinary.com/deuy1pr9e/image/upload/v1747157277/stocksipImages/iuj3ac91phua3kcrittk.jpg",
       "description": "Temperatura recomendada: 18 - 22°C. Almacenar en lugar fresco y seco, lejos de la luz directa. Duración después de abierto: 6 meses. Comentarios: Mantener la botella en posición vertical.",
       "id": 1
     },
     {
       "id": 2,
-      "name": "Whisky Jameson",
-      "type": "Whisky",
+      "name": "Palta Hass",
+      "type": "Mango",
       "description": "Temperatura recomendada: 15-20°C. Almacenar en lugar oscuro y fresco. Duración después de abierto: 1 año. Comentarios: Evitar cambios bruscos de temperatura.",
       "imageUrl": "https://res.cloudinary.com/deuy1pr9e/image/upload/v1747157277/stocksipImages/iuj3ac91phua3kcrittk.jpg"
     },
     {
       "id": 3,
-      "name": "Vodka Absolut",
-      "type": "Vodka",
+      "name": "Naranja Valencia",
+      "type": "Naranja",
       "description": "Temperatura recomendada: 0-4°C. Almacenar en refrigerador. Duración después de abierto: 2 años. Comentarios: Ideal para mantener en el congelador.",
       "imageUrl": "https://res.cloudinary.com/dmhlgoedk/image/upload/v1750139825/__jane_doe_zenless_zone_zero_drawn_by_otu_o2h2_oh4__sample-c9d598e9b2984f009c5b7bf7e23dc72d_yqynqe.jpg"
     },
     {
       "id": 4,
-      "name": "Vino Tinto Malbec",
-      "type": "Vino",
+      "name": "Mango Kent",
+      "type": "Fruta",
       "description": "Temperatura recomendada: 16-18°C. Almacenar en lugar oscuro y fresco. Duración después de abierto: 3-5 días. Comentarios: Mantener la botella en posición horizontal.",
       "imageUrl": "https://res.cloudinary.com/deuy1pr9e/image/upload/v1747157277/stocksipImages/iuj3ac91phua3kcrittk.jpg"
     },
     {
       "id": 5,
-      "name": "Pisco Queirolo",
-      "type": "Pisco",
+      "name": "Uva Red Globe",
+      "type": "Uva",
       "description": "Temperatura recomendada: 15-20°C. Almacenar en lugar fresco y seco. Duración después de abierto: 1 año. Comentarios: Evitar exposición a la luz solar.",
       "imageUrl": "https://res.cloudinary.com/deuy1pr9e/image/upload/v1747157277/stocksipImages/iuj3ac91phua3kcrittk.jpg"
     },
     {
-      "name": "Vino Chueco",
-      "type": "Vino",
+      "name": "Fresa",
+      "type": "Fruta",
       "description": "Hola como estas",
       "imageUrl": "https://res.cloudinary.com/dmhlgoedk/image/upload/v1750143228/rl3ttalvhxwyopsoyspx.jpg",
       "id": "6"
     },
     {
-      "name": "Vino",
-      "type": "Vino",
+      "name": "Fruta",
+      "type": "Fruta",
       "imageUrl": "https://res.cloudinary.com/dmhlgoedk/image/upload/v1750143593/iaapjkfxugbrobxjpuyu.jpg",
       "description": "Temperatura recomendada: 15-18 C. Almacenar en lugar frio. Duración después de abierto: 6 meses. Comentarios: Matener temperado.",
       "id": "7"
@@ -406,7 +406,7 @@
   ],
   "resupplyPlans": [
     {
-      "licoreria": "Linda",
+      "fruteria": "Linda",
       "productos": [
         "1",
         "2",
@@ -421,7 +421,7 @@
       "id": "1"
     },
     {
-      "licoreria": "Linda",
+      "fruteria": "Linda",
       "productos": [
         "1",
         "2"
@@ -435,7 +435,7 @@
     },
     {
       "id": "3",
-      "licoreria": "trgrgyervgeyeyghhhhhhhhhh",
+      "fruteria": "trgrgyervgeyeyghhhhhhhhhh",
       "productos": [
         "2",
         "1",
@@ -469,9 +469,9 @@
       "id": "a1",
       "catalogId": "1",
       "dateAdded": "2025-05-13T00:00:00Z",
-      "name": "Vino Tinto Malbec",
+      "name": "Mango Kent",
       "productType": "Destilado",
-      "brand": "Bodega del Sur",
+      "brand": "Huertos del Sur",
       "content": 123,
       "unitPrice": 289
     },
@@ -479,9 +479,9 @@
       "id": "a3",
       "catalogId": "1",
       "dateAdded": "2025-05-13T00:00:00Z",
-      "name": "Ron Cartavio",
-      "productType": "Ron",
-      "brand": "Ron Cartavio",
+      "name": "Plátano de seda",
+      "productType": "Plátano",
+      "brand": "Plátano de seda",
       "content": 123,
       "unitPrice": 45
     },
@@ -489,8 +489,8 @@
       "id": "a4",
       "catalogId": "1",
       "dateAdded": "2025-05-13T00:00:00Z",
-      "name": "Absolut Vodka",
-      "productType": "Vodka",
+      "name": "Naranja Valencia",
+      "productType": "Naranja",
       "brand": "Los Angeles",
       "content": 123,
       "unitPrice": 56
@@ -499,7 +499,7 @@
       "id": "a5",
       "catalogId": "1",
       "dateAdded": "2025-05-13T00:00:00Z",
-      "name": "Vino Blanco",
+      "name": "Manzana Golden",
       "productType": "Destilado",
       "brand": "Rio Grande",
       "content": 123,
@@ -509,9 +509,9 @@
       "id": "a6",
       "catalogId": "2",
       "dateAdded": "2025-05-13T00:00:00Z",
-      "name": "Vino Tinto Malbec",
+      "name": "Mango Kent",
       "productType": "Destilado",
-      "brand": "bodega del Sur",
+      "brand": "Huertos del Sur",
       "content": 123,
       "unitPrice": 35
     },
@@ -519,8 +519,8 @@
       "id": "a8",
       "catalogId": 1,
       "dateAdded": "2025-05-13T00:00:00Z",
-      "name": "Vodka",
-      "productType": "Alcohol",
+      "name": "Naranja",
+      "productType": "Fruta",
       "brand": "Absolut",
       "content": 123,
       "unitPrice": 135
@@ -529,9 +529,9 @@
       "id": "a9979a50-ccd4-4f60-91eb-3932ff9bc28d",
       "catalogId": 1,
       "dateAdded": "2025-06-20T00:45:51.340Z",
-      "name": "Vino Tinto Semiseco",
-      "productType": "Vino",
-      "brand": "Ron Cartavio",
+      "name": "Piña Golden",
+      "productType": "Fruta",
+      "brand": "Plátano de seda",
       "content": 450,
       "unitPrice": 67
     },
@@ -539,7 +539,7 @@
       "id": "c0680aec-b1ad-4bf1-9e93-1bdd46763bf0",
       "catalogId": 1,
       "dateAdded": "2025-06-20T19:45:30.951Z",
-      "name": "Ron Blanco",
+      "name": "Kiwi",
       "productType": "Destilado",
       "brand": "Tabernero",
       "content": 560,
@@ -575,9 +575,9 @@
           "id": "a6",
           "catalogId": "2",
           "dateAdded": "2025-05-13T00:00:00Z",
-          "name": "Vino Tinto Malbec",
+          "name": "Mango Kent",
           "productType": "Destilado",
-          "brand": "bodega del Sur",
+          "brand": "Huertos del Sur",
           "content": 123,
           "unitPrice": 35
         }

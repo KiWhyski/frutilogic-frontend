@@ -4,7 +4,7 @@
 
     <div
       class="orders-wrapper"
-      :class="{ 'orders-wrapper--restricted': !isSupplier && !isLiquorStoreOwner }"
+      :class="{ 'orders-wrapper--restricted': !isSupplier && !isFruitStoreOwner }"
     >
       <SalesOrderComponent
         v-if="isSupplier"
@@ -12,12 +12,12 @@
       />
 
       <PurchaseOrder
-        v-if="isLiquorStoreOwner"
+        v-if="isFruitStoreOwner"
         :orders="orders"
       />
 
       <div
-        v-if="!isSupplier && !isLiquorStoreOwner"
+        v-if="!isSupplier && !isFruitStoreOwner"
         class="no-access"
         role="status"
         aria-live="polite"
@@ -55,6 +55,7 @@
 import { ref, onMounted } from 'vue';
 import { useAuthenticationStore } from '@/authentication/services/authentication.store.js';
 import { PurchaseOrderService } from '@/order-operation-and-monitoring/services/purchase-order.service.js';
+import { isFruitStoreOwner as checkFruitStoreOwner, isSupplier as checkSupplier } from '@/shared/utils/account-role.js';
 
 import SideNavbar from '@/public/components/side-navbar.vue';
 import ToolbarContent from '@/public/components/toolbar-content.component.vue';
@@ -76,7 +77,7 @@ export default {
 
     const orders = ref([]);
     const isSupplier = ref(false);
-    const isLiquorStoreOwner = ref(false);
+    const isFruitStoreOwner = ref(false);
 
     const loadOrders = async () => {
       const account = authStore.account;
@@ -87,11 +88,11 @@ export default {
       }
 
       try {
-        if (account.accountRole === 'Supplier') {
+        if (checkSupplier(account.accountRole)) {
           isSupplier.value = true;
           orders.value = await orderSrv.getAll({ supplierAccountId: account.accountId });
-        } else if (account.accountRole === 'Liquor Store Owner') {
-          isLiquorStoreOwner.value = true;
+        } else if (checkFruitStoreOwner(account.accountRole)) {
+          isFruitStoreOwner.value = true;
           orders.value = await orderSrv.getAll({ buyerAccountId: account.accountId });
         } else {
           console.warn('Rol no reconocido:', account.accountRole);
@@ -106,7 +107,7 @@ export default {
     return {
       orders,
       isSupplier,
-      isLiquorStoreOwner,
+      isFruitStoreOwner,
       loadOrders,
     };
   },

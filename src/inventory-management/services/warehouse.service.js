@@ -57,11 +57,13 @@ export class WarehouseService extends BaseService {
             return warehouseDevList().map((r) => WarehouseAssembler.toEntityFromResource(r));
         }
         const accountId =  this.getAccountId();
-        const endpoint = `${import.meta.env.VITE_BASE_API_URL}${this.accountWarehouseEndpoint.replace('{accountId}', accountId)}`;
+        const endpoint = this.accountWarehouseEndpoint.replace('{accountId}', accountId);
 
         const response = await httpInstance.get(endpoint);
         const raw = response.data;
-        const list = Array.isArray(raw) ? raw : (raw?.items ?? raw?.data ?? []);
+        const list = Array.isArray(raw)
+            ? raw
+            : (raw?.warehouses ?? raw?.items ?? raw?.data ?? []);
         if (!Array.isArray(list)) {
             console.warn('getWarehousesByAccountId: expected array', raw);
             return [];
@@ -79,14 +81,10 @@ export class WarehouseService extends BaseService {
         if (isFrontendOnly()) {
             return warehouseDevCreate(warehouseData);
         }
-        let accountId = this.getAccountId();
-        const endpoint = `${import.meta.env.VITE_BASE_API_URL}${this.accountWarehouseEndpoint.replace('{accountId}', accountId)}`;
+        const accountId = this.getAccountId();
+        const endpoint = this.accountWarehouseEndpoint.replace('{accountId}', accountId);
 
         const formData = this.#createWarehouseFormData(warehouseData, imageFile);
-
-        if (imageFile) {
-            formData.append('Image', imageFile);
-        }
 
         const response = await httpInstance.post(endpoint, formData, {
             headers: {
@@ -122,7 +120,7 @@ export class WarehouseService extends BaseService {
             const updated = warehouseDevUpdate(warehouseId, warehouseData);
             return updated ?? { success: true };
         }
-        const endpoint = `${import.meta.env.VITE_BASE_API_URL}${this.resourceEndpoint}/${warehouseId}`;
+        const endpoint = `${this.resourceEndpoint}/${warehouseId}`;
         const formData = this.#createWarehouseFormData(warehouseData, imageFile);
 
         const response = await httpInstance.put(endpoint, formData, {
@@ -139,9 +137,11 @@ export class WarehouseService extends BaseService {
             return warehouseDevCountPayload();
         }
         const accountId = this.getAccountId();
-        const endpoint = `${import.meta.env.VITE_BASE_API_URL}${this.accountWarehousesCountEndpoint.replace('{accountId}', accountId)}`;
+        const endpoint = this.accountWarehouseEndpoint.replace('{accountId}', accountId);
         const response = await httpInstance.get(endpoint);
-        return response.data;
+        const raw = response.data;
+        const count = raw?.total ?? (Array.isArray(raw?.warehouses) ? raw.warehouses.length : 0);
+        return { count };
     }
 
 

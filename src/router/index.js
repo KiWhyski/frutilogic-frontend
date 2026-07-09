@@ -47,7 +47,7 @@ const routes = [
     },
     {
         path: '/sign-up',
-        name: 'sing-up',
+        name: 'sign-up',
         component: RegisterComponent
     },
     {
@@ -170,11 +170,6 @@ const routes = [
         name: 'ProductEdit',
         component: ProductCreateAndEdit,
         props: true
-    },
-    {
-        path: '/:pathMatch(.*)*',
-        name: 'PageNotFound',
-        component: PageNotFoundComponent
     },
     {
         path: '/payments-success',

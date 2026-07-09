@@ -1,16 +1,13 @@
-import {useAuthenticationStore} from "./authentication.store.js";
+import { useAuthenticationStore } from "./authentication.store.js";
 
 /**
- * Interceptor to add authentication token to the request
- * @param config - Axios request configuration
- * @returns {AxiosRequestConfig} - Updated Axios request configuration
+ * Adds Bearer token when available (localStorage or active session).
  */
 export const authenticationInterceptor = (config) => {
     const authenticationStore = useAuthenticationStore();
-    const isSignedIn = authenticationStore.isSignedIn;
-    if (isSignedIn) {
-        config.headers.Authorization = `Bearer ${authenticationStore.currentToken}`;
-        console.log(config);
+    const token = authenticationStore.currentToken;
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
-}
+};

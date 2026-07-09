@@ -2,6 +2,7 @@
 
 import {useAuthenticationStore} from "@/authentication/services/authentication.store.js";
 import {SignInRequest} from "@/authentication/model/sign-in.request.js";
+import { extractErrorMessage } from "@/authentication/services/authentication.service.js";
 import {Toast as PvToast} from "primevue";
 import {useToast} from "primevue/usetoast";
 export default {
@@ -19,14 +20,8 @@ export default {
     }
   },
   methods: {
-    goToConfirmation() {
-    },
     goToRegister() {
-      this.authenticationStore.enterLocalPreview(this.$router);
-    },
-    /** Same preview as Register — useful if you use Sign In with the API down. */
-    enterWithoutBackend() {
-      this.authenticationStore.enterLocalPreview(this.$router);
+      this.$router.push({ name: 'sign-up' });
     },
     goToPasswordRecovery() {
       this.$router.push('/password-recovery');
@@ -34,21 +29,30 @@ export default {
     togglePassword() {
       this.hide = !this.hide;
     },
-    onSignIn() {
-      let signUpRequest = new SignInRequest(this.username, this.password);
-      try {
-        this.authenticationStore.signIn(signUpRequest, this.$router);
-      } catch (error) {
+    async onSignIn() {
+      if (!this.username?.trim() || !this.password) {
         this.toast.add({
-          severity: 'error',
+          severity: 'warn',
           summary: this.$t('toast.error'),
           detail: this.$t('sign-in.invalid-credentials'),
           life: 3000
         });
+        return;
+      }
+
+      const signInRequest = new SignInRequest(this.username.trim().toLowerCase(), this.password);
+      try {
+        await this.authenticationStore.signIn(signInRequest, this.$router);
+      } catch (error) {
+        this.toast.add({
+          severity: 'error',
+          summary: this.$t('toast.error'),
+          detail: extractErrorMessage(error),
+          life: 4000
+        });
         console.error('Error to enter the system:', error);
       }
     }
-
   }
 }
 </script>
@@ -66,7 +70,7 @@ export default {
     <!-- Login Section -->
     <div class="login-section">
       <h2>{{ $t('sign-in.title') }}</h2>
-      <form @submit.prevent="goToConfirmation">
+      <form @submit.prevent="onSignIn">
         <div class="form-group">
           <label for="username">{{ $t('sign-in.email') }}</label>
           <input
@@ -109,7 +113,7 @@ export default {
           </label>
         </div>
 
-        <button type="submit" class="sign-in-button" @click="onSignIn">
+        <button type="submit" class="sign-in-button">
           {{ $t('sign-in.signIn') }}
         </button>
 
@@ -123,24 +127,6 @@ export default {
             Crear cuenta
           </button>
         </p>
-
-        <p class="local-preview-row">
-          <button type="button" class="local-preview-link" @click="enterWithoutBackend">
-            <i class="pi pi-external-link local-preview-link__icon" aria-hidden="true"></i>
-            Explorar la app sin servidor
-          </button>
-        </p>
-
-        <div class="divider">{{ $t('sign-in.or') }}</div>
-
-        <div class="social-login">
-          <button type="button" class="social-button">
-            <img src="@/assets/google-icon.svg" alt="Google" />
-          </button>
-          <button type="button" class="social-button">
-            <i class="pi pi-key"></i>
-          </button>
-        </div>
       </form>
     </div>
   </div>

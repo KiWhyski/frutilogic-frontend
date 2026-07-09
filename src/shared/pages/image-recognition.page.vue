@@ -1,43 +1,42 @@
 <template>
-  <div class="recognition-page">
-    <div class="breadcrumb">
-      <router-link to="/">Home</router-link>
-      <span> / </span>
-      <span>{{ $t('Reconocimiento de Imágenes') }}</span>
-    </div>
+  <div class="recognition-layout">
+    <side-navbar />
+    <div class="recognition-main">
+      <div class="recognition-page">
+        <image-recognition-component />
 
-    <image-recognition-component />
+        <!-- Sección adicional: Información sobre cómo funciona -->
+        <div class="info-section">
+          <div class="info-card">
+            <h3>{{ $t('Cómo funciona') }}</h3>
+            <ol>
+              <li>{{ $t('Presiona "Iniciar Reconocimiento" para acceder a tu cámara web') }}</li>
+              <li>{{ $t('El modelo de inteligencia artificial analizará lo que ve la cámara') }}</li>
+              <li>{{ $t('Verás predicciones en tiempo real en el lado derecho') }}</li>
+              <li>{{ $t('Presiona "Capturar y Guardar" para guardar una predicción') }}</li>
+              <li>{{ $t('Accede a tu historial en cualquier momento') }}</li>
+            </ol>
+          </div>
 
-    <!-- Sección adicional: Información sobre cómo funciona -->
-    <div class="info-section">
-      <div class="info-card">
-        <h3>{{ $t('Cómo funciona') }}</h3>
-        <ol>
-          <li>{{ $t('Presiona "Iniciar Reconocimiento" para acceder a tu cámara web') }}</li>
-          <li>{{ $t('El modelo de inteligencia artificial analizará lo que ve la cámara') }}</li>
-          <li>{{ $t('Verás predicciones en tiempo real en el lado derecho') }}</li>
-          <li>{{ $t('Presiona "Capturar y Guardar" para guardar una predicción') }}</li>
-          <li>{{ $t('Accede a tu historial en cualquier momento') }}</li>
-        </ol>
-      </div>
+          <div class="info-card">
+            <h3>{{ $t('Consejos para mejores resultados') }}</h3>
+            <ul>
+              <li>{{ $t('Asegúrate de tener buena iluminación') }}</li>
+              <li>{{ $t('Posiciona el objeto directamente frente a la cámara') }}</li>
+              <li>{{ $t('Evita reflejos de luz directa') }}</li>
+              <li>{{ $t('Intenta desde diferentes ángulos') }}</li>
+              <li>{{ $t('La confianza superior al 80% es generalmente buena') }}</li>
+            </ul>
+          </div>
 
-      <div class="info-card">
-        <h3>{{ $t('Consejos para mejores resultados') }}</h3>
-        <ul>
-          <li>{{ $t('Asegúrate de tener buena iluminación') }}</li>
-          <li>{{ $t('Posiciona el objeto directamente frente a la cámara') }}</li>
-          <li>{{ $t('Evita reflejos de luz directa') }}</li>
-          <li>{{ $t('Intenta desde diferentes ángulos') }}</li>
-          <li>{{ $t('La confianza superior al 80% es generalmente buena') }}</li>
-        </ul>
-      </div>
-
-      <div class="info-card">
-        <h3>{{ $t('Clases reconocidas') }}</h3>
-        <div class="classes-list">
-          <span v-for="cls in recognizedClasses" :key="cls" class="class-badge">
-            {{ cls }}
-          </span>
+          <div class="info-card">
+            <h3>{{ $t('Clases reconocidas') }}</h3>
+            <div class="classes-list">
+              <span v-for="cls in recognizedClasses" :key="cls" class="class-badge">
+                {{ cls }}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -49,6 +48,7 @@ import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { usePredictionsStore } from '@/shared/services/predictions.store.js';
 import ImageRecognitionComponent from '@/shared/components/image-recognition.component.vue';
+import SideNavbar from '@/public/components/side-navbar.vue';
 
 const { t } = useI18n();
 const predictionsStore = usePredictionsStore();
@@ -68,35 +68,26 @@ const stats = computed(() => predictionsStore.stats);
 </script>
 
 <style scoped>
+.recognition-layout {
+  min-height: 100vh;
+  display: flex;
+  align-items: stretch;
+}
+
+.recognition-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+}
+
 .recognition-page {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 20px;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.breadcrumb {
-  color: white;
-  margin-bottom: 30px;
-  font-size: 0.95rem;
-}
-
-.breadcrumb a {
-  color: white;
-  text-decoration: none;
-  opacity: 0.8;
-  transition: opacity 0.3s;
-}
-
-.breadcrumb a:hover {
-  opacity: 1;
-  text-decoration: underline;
-}
-
-.breadcrumb span {
-  margin: 0 10px;
-  opacity: 0.6;
+  padding: 24px 24px 32px;
+  min-height: 100%;
+  background: #ffffff;
 }
 
 /* Sección de información */

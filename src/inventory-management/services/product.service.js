@@ -1,23 +1,20 @@
 import httpInstance from "@/shared/services/http.instance.js";
 import {useAuthenticationStore} from "@/authentication/services/authentication.store.js";
 
-const baseApiUrl = import.meta.env.VITE_BASE_API_URL;
-const accountProducts = import.meta.env.VITE_ACCOUNT_PRODUCTS_ENDPOINT_PATH;
-const productsEndpoint = import.meta.env.VITE_PRODUCTS_ENDPOINT_PATH;
-const accountProductsCountEndpoint = import.meta.env.VITE_PRODUCTS_COUNT_ENDPOINT_PATH;
+const productsEndpoint = import.meta.env.VITE_PRODUCTS_ENDPOINT_PATH || 'products';
+const accountProducts = import.meta.env.VITE_ACCOUNT_PRODUCTS_ENDPOINT_PATH
+    || 'accounts/{accountId}/products';
 
 export class ProductService {
 
     async getById(productId) {
-        const endpoint = `${baseApiUrl}${productsEndpoint}/${productId}`;
-        const response = await httpInstance.get(endpoint);
+        const response = await httpInstance.get(`${productsEndpoint}/${productId}`);
         return response.data;
     }
 
     async createProduct(productData, imageFile) {
-        let accountId = this.getAccountId();
-        const endpoint = `${baseApiUrl}${accountProducts.replace('{accountId}', accountId)}`;
-
+        const accountId = this.getAccountId();
+        const endpoint = accountProducts.replace('{accountId}', accountId);
         const formData = this.#createProductFormData(productData, imageFile);
 
         const response = await httpInstance.post(endpoint, formData, {
@@ -30,15 +27,12 @@ export class ProductService {
 
     async updateProduct(productId, productData, imageFile) {
         try {
-            const endpoint = `${baseApiUrl}${productsEndpoint}/${productId}`;
             const formData = this.#createProductFormData(productData, imageFile);
-
-            const response = await httpInstance.put(endpoint, formData, {
+            const response = await httpInstance.put(`${productsEndpoint}/${productId}`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
             });
-
             return response.data;
         } catch (error) {
             console.error('Error updating product:', error);
@@ -47,16 +41,17 @@ export class ProductService {
     }
 
     async delete(productId) {
-        const response = await httpInstance.delete(`${baseApiUrl}${productsEndpoint}/${productId}`);
+        const response = await httpInstance.delete(`${productsEndpoint}/${productId}`);
         return response.data;
     }
 
-    // Backend API methods
     async getAllByAccountId() {
         const accountId = this.getAccountId();
         const endpoint = accountProducts.replace('{accountId}', accountId);
-        const url = `${baseApiUrl}${endpoint}`;
-        return await httpInstance.get(url);
+        const response = await httpInstance.get(endpoint);
+        const products = response.data?.products
+            ?? (Array.isArray(response.data) ? response.data : []);
+        return { data: products };
     }
 
     #createProductFormData(productData, imageFile) {
@@ -69,7 +64,6 @@ export class ProductService {
         if (imageFile) {
             formData.append('Image', imageFile);
         }
-
         return formData;
     }
 
@@ -80,8 +74,10 @@ export class ProductService {
 
     async getProductsCount() {
         const accountId = this.getAccountId();
-        const endpoint = `${baseApiUrl}${accountProductsCountEndpoint.replace('{accountId}', accountId)}`;
+        const endpoint = accountProducts.replace('{accountId}', accountId);
         const response = await httpInstance.get(endpoint);
-        return response.data;
+        const count = response.data?.total
+            ?? (Array.isArray(response.data?.products) ? response.data.products.length : 0);
+        return { count };
     }
 }

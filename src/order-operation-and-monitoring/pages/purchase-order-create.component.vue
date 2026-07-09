@@ -67,7 +67,7 @@ export default {
     const authStore       = useAuthenticationStore();
 
     /* ---------- refs ---------- */
-    const catalogId     = +route.params.catalogId;
+    const catalogId = String(route.params.catalogId);
     const catalog       = ref(null);
     const catalogItems  = ref([]);
     const selectedItems = ref({});
@@ -107,63 +107,16 @@ export default {
     };
 
     onMounted(async () => {
-      /* comprador (buyer) */
-      const myAccountId = authStore.account?.accountId;
-      if (myAccountId) buyerAcc.value = accountService.getCurrentAccountId(myAccountId);
-
-      /* catálogo y proveedor */
       catalog.value = await catalogService.getCatalogById(catalogId);
-      if (catalog.value?.accountId)
-        supplierAcc.value = accountService.getCurrentAccountId(catalog.value.accountId);
-
-      /* productos */
       await loadCatalogItems();
     });
 
-    /* ---------- order creation ---------- */
     const createOrder = async () => {
       const chosenIds = Object.keys(selectedItems.value).filter(id => selectedItems.value[id]);
       if (!chosenIds.length) { alert('Selecciona al menos un producto'); return; }
 
-      if (!buyerAcc.value?.accountId || !supplierAcc.value?.accountId) {
-        alert('Faltan datos del comprador o proveedor');
-        return;
-      }
-
-      const buyer = {
-        accountId    : buyerAcc.value.accountId,
-        userOwnerId  : buyerAcc.value.userOwnerId ?? '',
-        role         : buyerAcc.value.accountRole,
-        businessName : buyerAcc.value.businessName,
-        email        : buyerAcc.value.email
-      };
-
-      const supplier = {
-        accountId    : supplierAcc.value.accountId,
-        userOwnerId  : supplierAcc.value.userOwnerId ?? '',
-        role         : supplierAcc.value.accountRole,
-        businessName : supplierAcc.value.businessName,
-        email        : supplierAcc.value.email
-      };
-
-      const items = catalogItems.value
-          .filter(i => chosenIds.includes(i.id))
-          .map(i => ({
-            ...i,
-            customQuantity: Number(quantities.value[i.id]) || 1
-          }));
-
-      const payload = {
-        orderDate   : new Date().toISOString(),
-        buyer,
-        supplier,
-        items,
-        totalAmount : totalAmount.value,
-        totalItems  : items.length
-      };
-
       try {
-        await orderService.createPurchaseOrder(payload);
+        await orderService.createPurchaseOrder({ catalogId });
         alert('Orden creada con éxito');
         router.push('/orders');
       } catch (err) {

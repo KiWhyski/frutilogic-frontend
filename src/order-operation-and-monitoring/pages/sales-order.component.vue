@@ -176,7 +176,7 @@ export default {
 
 <style scoped>
 :root {
-  --primary-900: #5A033A;   /* vino            */
+  --primary-900: #5A033A;   /* fruta / marca */
   --primary-700: #6E0081;   /* púrpura oscuro  */
   --accent-100 : #ffffff;   /* lienzo de vista */
   --text-900   : #242424;

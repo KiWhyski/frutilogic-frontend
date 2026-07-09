@@ -19,7 +19,7 @@
       <p class="product-card__meta">
         <span class="product-card__brand">{{ displayBrand }}</span>
         <span class="product-card__dot" aria-hidden="true">·</span>
-        <span class="product-card__type">{{ displayLiquorType }}</span>
+        <span class="product-card__type">{{ displayFruitType }}</span>
       </p>
 
       <dl class="product-card__stats">
@@ -78,7 +78,7 @@ export default {
     displayBrand() {
       return this.product.brandName;
     },
-    displayLiquorType() {
+    displayFruitType() {
       return this.product.liquorType;
     },
     displayPrice() {

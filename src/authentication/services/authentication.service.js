@@ -1,60 +1,85 @@
 import httpInstance from "@/shared/services/http.instance.js";
+import { normalizeApiPath } from "@/shared/config/backend-url.js";
+import { parseAuthResponse } from "@/authentication/services/auth.session.js";
+import { normalizeAccountRole } from "@/shared/utils/account-role.js";
 
-/**
- * Service class to call authentication APIs
- * @summary
- * This class is responsible to call authentication APIs.
- * It contains methods to call sign-in and sign-up APIs.
- */
-export class AuthenticationService
-{
-    /**
-     * Method to call sign-in API
-     * @param signInRequest {SignInRequest} - Request object to sign-in
-     * @returns {Promise<httpInstance.AxiosResponse<SignInResponse>>} - Response from the API
-     *
-     */
-    signIn(signInRequest) {
-        console.log("🚀 signInRequest", signInRequest);
-        return httpInstance.post(import.meta.env.VITE_AUTH_SIGNIN_ENDPOINT, signInRequest);
+function mapAccountRole(role) {
+    return normalizeAccountRole(role) || role;
+}
+
+function extractErrorMessage(error) {
+    const data = error?.response?.data;
+    if (typeof data === 'string' && data.trim()) return data;
+    if (data?.message) return data.message;
+    if (data?.error) return data.error;
+    if (data?.title) return data.title;
+    return error?.message || 'Error de autenticación';
+}
+
+export class AuthenticationService {
+    signIn(email, password) {
+        return httpInstance.post(normalizeApiPath(import.meta.env.VITE_AUTH_SIGNIN_ENDPOINT || 'sign-in'), {
+            email: String(email).trim().toLowerCase(),
+            password,
+        });
     }
 
-    /**
-     * Method to call sign-up API
-     * @param signUpRequest {SignUpRequest} - Request object to sign-up
-     * @returns {Promise<httpInstance.AxiosResponse<SignUpResponse>>} - Response from the API
-     */
-    signUp(signUpRequest) {
-        return httpInstance.post(import.meta.env.VITE_AUTH_SIGNUP_ENDPOINT, signUpRequest);
+    signUp({ email, password }) {
+        const normalizedEmail = String(email).trim().toLowerCase();
+        const displayName = normalizedEmail.split('@')[0] || 'Usuario';
+        return httpInstance.post(normalizeApiPath(import.meta.env.VITE_AUTH_SIGNUP_ENDPOINT || 'sign-up'), {
+            email: normalizedEmail,
+            password,
+            name: displayName,
+            businessName: displayName,
+            role: 'LiquorStoreOwner',
+        });
     }
 
-    async sendRecoveryCode(username) {
-        return httpInstance.post(import.meta.env.VITE_SEND_RECOVERY_CODE_ENDPOINT, { username });
+    async fetchAccountRole(accountId) {
+        const response = await httpInstance.get(`accounts/${accountId}`);
+        return mapAccountRole(response.data?.role);
     }
 
-    async verifyRecoveryCode(username, recoveryCode) {
-        try {
-            const response = await httpInstance.post(import.meta.env.VITE_VERIFY_RECOVERY_CODE_ENDPOINT, {
-                username,
-                recoveryCode
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Backend error:', error.response?.data || error.message);
-            throw error;
+    async completeSignIn(response) {
+        const session = parseAuthResponse(response.data);
+        if (!session.token) {
+            throw new Error('El servidor no devolvió un token de sesión');
         }
+
+        if (!session.accountRole && session.accountId) {
+            try {
+                session.accountRole = await this.fetchAccountRole(session.accountId);
+            } catch {
+                session.accountRole = 'Fruit Store Owner';
+            }
+        }
+
+        return session;
     }
 
-    async resetPassword(username, newPassword) {
-        try {
-            const response = await httpInstance.post(import.meta.env.VITE_RESET_PASSWORD_ENDPOINT, {
-                username,
-                newPassword
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Backend error:', error.response?.data || error.message);
-            throw error;
-        }
+    async sendRecoveryCode(email) {
+        return httpInstance.post(
+            normalizeApiPath(import.meta.env.VITE_SEND_RECOVERY_CODE_ENDPOINT || 'users/recovery-code'),
+            { email: String(email).trim().toLowerCase() }
+        );
+    }
+
+    async verifyRecoveryCode(email, code) {
+        const response = await httpInstance.post(
+            normalizeApiPath(import.meta.env.VITE_VERIFY_RECOVERY_CODE_ENDPOINT || 'users/verify-recovery-code'),
+            { email: String(email).trim().toLowerCase(), code }
+        );
+        return response.data;
+    }
+
+    async resetPassword(email, newPassword) {
+        const response = await httpInstance.put(
+            normalizeApiPath(import.meta.env.VITE_RESET_PASSWORD_ENDPOINT || 'users/reset-password'),
+            { email: String(email).trim().toLowerCase(), newPassword }
+        );
+        return response.data;
     }
 }
+
+export { extractErrorMessage, mapAccountRole };
