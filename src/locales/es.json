@@ -81,6 +81,8 @@
     "expand-contract": "Expandir/Contraer",
     "dashboard": "Panel",
     "inventory": "Inventario",
+    "products": "Productos",
+    "warehouses": "Almacenes",
     "alerts": "Alertas",
     "reports": "Reportes",
     "order": "Compras",

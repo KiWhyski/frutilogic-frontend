@@ -88,7 +88,7 @@ export default {
                   @click="navigate"
                 >
                   <i class="pi pi-box nav-item__icon" aria-hidden="true"></i>
-                  <span class="nav-item__label">{{ $t('toolbar.storage') }}</span>
+                  <span class="nav-item__label">{{ $t('toolbar.products') }}</span>
                 </button>
               </router-link>
             </li>
@@ -101,7 +101,7 @@ export default {
                   @click="navigate"
                 >
                   <i class="pi pi-warehouse nav-item__icon" aria-hidden="true"></i>
-                  <span class="nav-item__label">{{ $t('toolbar.inventory') }}</span>
+                  <span class="nav-item__label">{{ $t('toolbar.warehouses') }}</span>
                 </button>
               </router-link>
             </li>

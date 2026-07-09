@@ -152,8 +152,10 @@ export default {
       this.error = null;
       try {
         const response = await this.productsApi.getAllByAccountId();
-        this.products = response.data.map(item => new Product(
-          {
+        const items = Array.isArray(response?.data) ? response.data : [];
+        this.products = items
+          .filter((item) => item && (item.productId || item.name))
+          .map((item) => new Product({
             productId: item.productId,
             name: item.name,
             brandName: item.brandName,
@@ -161,11 +163,11 @@ export default {
             unitPriceAmount: item.unitPriceAmount,
             minimumStock: item.minimumStock,
             imageUrl: item.imageUrl,
-            accountId: item.accountId
-          }
-        ));
+            accountId: item.accountId,
+          }));
       } catch (error) {
         this.error = "Failed to load products";
+        this.products = [];
         console.error(error);
       }
     },

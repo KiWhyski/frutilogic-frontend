@@ -27,6 +27,8 @@
     "expand-contract": "Expand/Contract",
     "dashboard": "Dashboard",
     "inventory": "Inventory",
+    "products": "Products",
+    "warehouses": "Warehouses",
     "alerts": "Alerts",
     "order": "Orders",
     "storage": "Storage",
