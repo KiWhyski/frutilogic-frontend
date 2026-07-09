@@ -16,8 +16,10 @@ const MOCK_EXPIRATION_ALERTS = [
 async function fetchRawAlerts() {
     if (isFrontendOnly()) {
         return [
-            { id: '1', title: 'Manzana Fuji', message: 'Stock: 4', type: 'ProductLowStock' },
-            { id: '2', title: 'Uva Red Globe', message: 'Vence en 8 días', type: 'ProductExpired' },
+            { id: '1', title: 'Manzana Fuji', type: 'ProductLowStock',
+                details: { productName: 'Manzana Fuji', currentStock: 4, minimumStock: 10 } },
+            { id: '2', title: 'Uva Red Globe', type: 'ProductExpired',
+                details: { productName: 'Uva Red Globe', daysUntilExpiration: 8 } },
         ];
     }
 
@@ -28,9 +30,8 @@ async function fetchRawAlerts() {
         const { data } = await httpInstance.get(`accounts/${accountId}/alerts`);
         return Array.isArray(data) ? data : [];
     } catch (error) {
-        if (error?.response?.status === 400) return [];
         console.error('Error fetching alerts:', error);
-        return [];
+        throw error;
     }
 }
 
@@ -43,28 +44,32 @@ function alertTitle(alert) {
 }
 
 function toStockAlert(alert) {
-    const message = String(alert?.message ?? alert?.Message ?? '');
-    const stockMatch = message.match(/(\d+)/g);
-    const stock = stockMatch ? Number(stockMatch[0]) : 0;
-    const minStock = stockMatch?.length > 1 ? Number(stockMatch[1]) : stock + 1;
+    const details = alert?.details ?? alert?.Details ?? {};
+    const type = alertType(alert);
+    const stock = Number(details.currentStock ?? details.CurrentStock ?? 0);
+    const minStock = Number(details.minimumStock ?? details.MinimumStock ?? 0);
 
     return new StockAlert({
         id: alert?.id ?? alert?.Id ?? alertTitle(alert),
-        name: alertTitle(alert),
+        name: details.productName ?? details.ProductName ?? alertTitle(alert),
         stock,
         minStock,
+        state: type.includes('outofstock') ? 'out-of-stock' : 'low-stock',
+        productId: details.productId ?? details.ProductId ?? null,
+        warehouseName: details.warehouseName ?? details.WarehouseName ?? '',
     });
 }
 
 function toExpirationAlert(alert) {
-    const message = String(alert?.message ?? alert?.Message ?? '');
-    const daysMatch = message.match(/(\d+)/);
-    const expiresIn = daysMatch ? Number(daysMatch[1]) : 7;
+    const details = alert?.details ?? alert?.Details ?? {};
 
     return new ExpirationAlert({
         id: alert?.id ?? alert?.Id ?? alertTitle(alert),
-        name: alertTitle(alert),
-        expiresIn,
+        name: details.productName ?? details.ProductName ?? alertTitle(alert),
+        expiresIn: Number(details.daysUntilExpiration ?? details.DaysUntilExpiration ?? 0),
+        expirationDate: details.expirationDate ?? details.ExpirationDate ?? null,
+        warehouseName: details.warehouseName ?? details.WarehouseName ?? '',
+        productId: details.productId ?? details.ProductId ?? null,
     });
 }
 

@@ -11,6 +11,7 @@ function mapCatalog(raw) {
         ownerAccount: raw?.ownerAccount ?? raw?.OwnerAccount ?? '',
         contactEmail: raw?.contactEmail ?? raw?.ContactEmail ?? '',
         isPublished: Boolean(raw?.isPublished ?? raw?.IsPublished),
+        warehouseId: raw?.warehouseId ?? raw?.WarehouseId ?? '',
         catalogItems: items,
     };
 }
@@ -64,6 +65,7 @@ export class CatalogService {
             name: catalog.name,
             description: catalog.description || catalog.name,
             contactEmail: catalog.contactEmail || 'contacto@frutilogic.com',
+            warehouseId: catalog.warehouseId,
         });
         return mapCatalog(data);
     }

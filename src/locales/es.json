@@ -331,6 +331,7 @@
     "col-status": "Estado",
     "col-products": "Productos",
     "col-total": "Total",
+    "actions": "Acciones",
     "no-items": "Sin ítems",
     "products-count": "{n} productos",
     "sales": {
@@ -411,7 +412,8 @@
     "best-date-before": "Fecha de Vencimiento",
     "status": {
       "WithStock": "En Stock",
-      "OutOfStock": "Sin Stock"
+      "OutOfStock": "Sin Stock",
+      "LowStock": "Stock bajo"
     },
     "valid-date": "Debe seleccionar una fecha válida",
     "stock-added": "¡Stock añadido con éxito!",

@@ -1,6 +1,5 @@
 <template>
-  <SideNavbar>
-    <div class="order-container">
+  <div class="order-container">
       <Card v-for="order in orders" :key="order.id" class="order-card">
         <template #title>
           <div class="order-title">
@@ -33,7 +32,6 @@
           </div>
         </template>
       </Card>
-    </div>
 
     <Dialog
         v-model:visible="showDialog"
@@ -56,15 +54,13 @@
         </div>
       </div>
     </Dialog>
-  </SideNavbar>
+  </div>
 </template>
 
 <script>
 import { useAuthenticationStore } from '@/authentication/services/authentication.store.js';
 import { PurchaseOrderService }   from '@/order-operation-and-monitoring/services/purchase-order.service.js';
 
-import SideNavbar     from '@/public/components/side-navbar.vue';
-import ToolbarContent from '@/public/components/toolbar-content.component.vue';
 import Card           from 'primevue/card';
 import Button         from 'primevue/button';
 import Dialog         from 'primevue/dialog';
@@ -73,8 +69,6 @@ import Dropdown       from 'primevue/dropdown';
 export default {
   name: 'SalesOrderComponent',
   components: {
-    SideNavbar,
-    ToolbarContent,
     Card,
     Button,
     Dialog,
@@ -92,12 +86,21 @@ export default {
 
   computed: {
     statusOptions() {
-      return [
-        { label: this.$t('orders.sales.status-received'), value: 0, apiStatus: 'Received' },
-        { label: this.$t('orders.sales.status-inprocess'), value: 1, apiStatus: 'InProcess' },
-        { label: this.$t('orders.sales.status-arrived'), value: 2, apiStatus: 'Arrived' },
-        { label: this.$t('orders.sales.status-canceled'), value: 3, apiStatus: 'Canceled' }
-      ];
+      if (!this.currentOrder) return [];
+      const options = {
+        Processing: [
+          { label: 'Confirmar', value: 'confirm', apiStatus: 'Confirmed' },
+          { label: this.$t('orders.sales.status-canceled'), value: 'cancel', apiStatus: 'Canceled' }
+        ],
+        Confirmed: [
+          { label: 'Marcar como enviado', value: 'ship', apiStatus: 'Deliverying' },
+          { label: this.$t('orders.sales.status-canceled'), value: 'cancel', apiStatus: 'Canceled' }
+        ],
+        Deliverying: [
+          { label: this.$t('orders.sales.status-canceled'), value: 'cancel', apiStatus: 'Canceled' }
+        ]
+      };
+      return options[this.currentOrder.status] ?? [];
     }
   },
 
@@ -105,7 +108,9 @@ export default {
     translateOrderStatus(status) {
       const key = {
         Received: 'orders.sales.status-received',
-        InProcess: 'orders.sales.status-inprocess',
+        Processing: 'orders.sales.status-inprocess',
+        Confirmed: 'orders.sales.status-inprocess',
+        Deliverying: 'orders.sales.status-arrived',
         Arrived: 'orders.sales.status-arrived',
         Canceled: 'orders.sales.status-canceled'
       }[status];
@@ -149,7 +154,7 @@ export default {
         return;
       }
       this.currentOrder   = order;
-      this.selectedStatus = this.statusOptions.find(o => o.apiStatus === order.status)?.value ?? null;
+      this.selectedStatus = null;
       this.showDialog     = true;
     },
 

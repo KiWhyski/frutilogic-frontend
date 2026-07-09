@@ -18,26 +18,41 @@ function mapPurchaseOrder(raw) {
 }
 
 function mapSalesOrder(raw) {
+    const items = raw?.items ?? raw?.Items ?? [];
+    const buyer = raw?.buyer ?? raw?.Buyer ?? '';
     return {
         id: raw?.id ?? raw?.Id ?? '',
         orderCode: raw?.orderCode ?? raw?.OrderCode ?? raw?.id ?? raw?.Id ?? '',
         status: raw?.status ?? raw?.Status ?? '',
-        orderDate: raw?.orderDate ?? raw?.OrderDate ?? raw?.createdAt ?? raw?.CreatedAt ?? null,
-        totalAmount: Number(raw?.total ?? raw?.Total ?? raw?.totalAmount ?? 0),
-        totalItems: (raw?.items ?? raw?.Items ?? []).length,
-        items: raw?.items ?? raw?.Items ?? [],
+        orderDate: raw?.receiptDate ?? raw?.ReceiptDate ?? raw?.orderDate ?? raw?.OrderDate ?? null,
+        date: raw?.receiptDate ?? raw?.ReceiptDate ?? raw?.orderDate ?? raw?.OrderDate ?? null,
+        buyer: { id: buyer, email: buyer },
+        totalAmount: items.reduce((sum, item) =>
+            sum + Number(item?.unitPrice ?? item?.UnitPrice ?? 0) * Number(item?.quantityToSell ?? item?.QuantityToSell ?? 0), 0),
+        totalItems: items.length,
+        items: items.map(item => ({
+            id: item?.productId ?? item?.ProductId ?? '',
+            name: item?.productName ?? item?.ProductName ?? 'Producto',
+            unitPrice: Number(item?.unitPrice ?? item?.UnitPrice ?? 0),
+            quantity: Number(item?.quantityToSell ?? item?.QuantityToSell ?? 0),
+        })),
     };
 }
 
 export class PurchaseOrderService {
-    async createPurchaseOrder({ catalogId, orderCode } = {}) {
+    async createPurchaseOrder({ catalogId, orderCode, items = [] } = {}) {
         const accountId = useAuthenticationStore().currentAccountId;
         if (!accountId) throw new Error('Cuenta no encontrada');
         if (!catalogId) throw new Error('Catálogo requerido');
+        if (!items.length) throw new Error('Selecciona al menos un producto');
 
         const { data } = await http.post(`accounts/${accountId}/purchase-orders`, {
             orderCode: orderCode || `PO-${Date.now()}`,
             catalogIdBuyFrom: String(catalogId),
+            items: items.map(item => ({
+                productId: String(item.productId),
+                quantity: Number(item.quantity),
+            })),
         });
         return mapPurchaseOrder(data);
     }
@@ -54,7 +69,8 @@ export class PurchaseOrderService {
 
         if (filters.supplierAccountId || isSupplier(role)) {
             const { data } = await http.get(`orders/supplier/${accountId}`);
-            return (Array.isArray(data) ? data : []).map(mapSalesOrder);
+            const orders = data?.orders ?? data?.Orders ?? (Array.isArray(data) ? data : []);
+            return orders.map(mapSalesOrder);
         }
 
         const { data } = await http.get(`accounts/${accountId}/purchase-orders`);
@@ -62,14 +78,20 @@ export class PurchaseOrderService {
     }
 
     async updateStatus(orderId, action) {
-        const actionMap = {
-            0: 'receptions',
-            1: 'confirmations',
-            2: 'shipments',
-            3: 'cancellations',
-        };
-        const path = actionMap[action] ?? 'confirmations';
-        const { data } = await http.put(`purchase-orders/${orderId}/${path}`);
+        const allowedActions = new Set(['confirm', 'ship', 'receive', 'cancel']);
+        if (!allowedActions.has(action)) throw new Error('Acción de estado inválida');
+        const { data } = await http.put(`orders/${orderId}/${action}`);
         return data;
+    }
+
+    async updatePurchaseStatus(orderId, action) {
+        const paths = {
+            confirm: 'confirmations',
+            receive: 'receptions',
+            cancel: 'cancellations',
+        };
+        const path = paths[action];
+        if (!path) throw new Error('Acción de compra inválida');
+        await http.put(`purchase-orders/${orderId}/${path}`);
     }
 }

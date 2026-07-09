@@ -38,6 +38,34 @@
           <span>{{ formatPrice(data.totalAmount) }}</span>
         </template>
       </Column>
+
+      <Column :header="$t('orders.actions')">
+        <template #body="{ data }">
+          <div class="order-actions">
+            <Button
+              v-if="data.status === 'Processing'"
+              label="Confirmar"
+              size="small"
+              @click="changeStatus(data, 'confirm', 'Confirmed')"
+            />
+            <Button
+              v-if="data.status === 'Shipped'"
+              label="Recibir"
+              size="small"
+              severity="success"
+              @click="changeStatus(data, 'receive', 'Received')"
+            />
+            <Button
+              v-if="data.status === 'Processing' || data.status === 'Confirmed'"
+              label="Cancelar"
+              size="small"
+              severity="danger"
+              text
+              @click="changeStatus(data, 'cancel', 'Canceled')"
+            />
+          </div>
+        </template>
+      </Column>
     </DataTable>
 
     <p v-else class="empty-text">{{ $t('orders.none') }}</p>
@@ -47,20 +75,25 @@
 <script>
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
-import { onMounted, ref } from 'vue';
+import Button from 'primevue/button';
+import { onMounted, ref, watch } from 'vue';
 import { PurchaseOrderService } from '@/order-operation-and-monitoring/services/purchase-order.service.js';
 import { useAuthenticationStore } from '@/authentication/services/authentication.store.js';
 
 export default {
   name: 'PurchaseOrderList',
-  components: { DataTable, Column },
+  components: { DataTable, Column, Button },
   props: {
+    orders: {
+      type: Array,
+      default: () => []
+    },
     filterByBuyer: Boolean,
     filterBySupplier: Boolean,
     status: String
   },
   setup(props) {
-    const orders = ref([]);
+    const orders = ref([...props.orders]);
     const orderService = new PurchaseOrderService();
     const authStore = useAuthenticationStore();
 
@@ -86,6 +119,7 @@ export default {
     };
 
     onMounted(async () => {
+      if (props.orders.length) return;
       try {
         const filters = {};
 
@@ -105,10 +139,24 @@ export default {
       }
     });
 
+    watch(() => props.orders, (value) => {
+      orders.value = [...value];
+    }, { deep: true });
+
+    const changeStatus = async (order, action, nextStatus) => {
+      try {
+        await orderService.updatePurchaseStatus(order.id, action);
+        order.status = nextStatus;
+      } catch (err) {
+        console.error('Error updating purchase order:', err.response?.data || err);
+      }
+    };
+
     return {
       orders,
       formatPrice,
-      formatDate
+      formatDate,
+      changeStatus
     };
   }
 };
@@ -133,5 +181,10 @@ export default {
   font-size: 1.2rem;
   color: #888;
   margin-top: 2rem;
+}
+.order-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 </style>

@@ -18,6 +18,7 @@ export default {
   methods: {
     async loadAlerts() {
       this.loading = true;
+      this.error = null;
       try {
         const [stock, expiration] = await Promise.all([
           fetchStockAlerts(),
@@ -32,7 +33,7 @@ export default {
         this.loading = false;
       }
     },
-    async handleStockUpdated() {
+    async handleAlertsUpdated() {
       await this.loadAlerts();
     }
   },
@@ -56,13 +57,14 @@ export default {
             :alerts="stockAlerts" 
             linkText="View all alerts"
             type="stock"
-            @stock-updated="handleStockUpdated"
+            @alerts-updated="handleAlertsUpdated"
           />
           <AlertList 
             :title="$t('alerts.next-to-expire')"
             :alerts="expirationAlerts" 
             linkText="See all products"
             type="expiration"
+            @alerts-updated="handleAlertsUpdated"
           />
         </template>
       </div>

@@ -17,7 +17,8 @@
         <tbody>
         <tr v-for="item in catalogItems" :key="item.id">
           <td>
-            <input class="check" type="checkbox" v-model="selectedItems[item.id]" />
+            <input class="check" type="checkbox" v-model="selectedItems[item.id]"
+                   :disabled="item.availableStock < 1" />
           </td>
           <td>{{ item.name }}</td>
           <td>{{ item.brand }}</td>
@@ -25,6 +26,7 @@
           <td>
             <input type="number"
                    min="1"
+                   :max="item.availableStock"
                    :placeholder="$t('purchase.qty-placeholder')"
                    v-model.number="quantities[item.id]"
                    :disabled="!selectedItems[item.id]"
@@ -108,15 +110,33 @@ export default {
 
     onMounted(async () => {
       catalog.value = await catalogService.getCatalogById(catalogId);
+      if (!catalog.value?.isPublished) {
+        alert('El catálogo ya no está publicado.');
+        await router.push('/catalog');
+        return;
+      }
+      if (catalog.value.ownerAccount === authStore.currentAccountId) {
+        alert('No puedes comprar de tu propio catálogo.');
+        await router.push('/catalog');
+        return;
+      }
       await loadCatalogItems();
     });
 
     const createOrder = async () => {
       const chosenIds = Object.keys(selectedItems.value).filter(id => selectedItems.value[id]);
       if (!chosenIds.length) { alert('Selecciona al menos un producto'); return; }
+      const items = chosenIds.map(productId => {
+        const item = catalogItems.value.find(candidate => candidate.id === productId);
+        return { productId, quantity: Number(quantities.value[productId]), availableStock: item?.availableStock ?? 0 };
+      });
+      if (items.some(item => !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > item.availableStock)) {
+        alert('Revisa las cantidades y el stock disponible.');
+        return;
+      }
 
       try {
-        await orderService.createPurchaseOrder({ catalogId });
+        await orderService.createPurchaseOrder({ catalogId, items });
         alert('Orden creada con éxito');
         router.push('/orders');
       } catch (err) {

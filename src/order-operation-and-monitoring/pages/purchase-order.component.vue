@@ -1,6 +1,5 @@
 <template>
-  <SideNavbar>
-    <div class="order-container-page">
+  <div class="order-container-page">
       <div class="purchase-order-wrapper">
         <div class="actions">
           <router-link to="/catalog" class="new-order-button">
@@ -11,20 +10,15 @@
 
         <PurchaseOrderListComponent :orders="orders" />
       </div>
-    </div>
-  </SideNavbar>
+  </div>
 </template>
 
 <script>
 import PurchaseOrderListComponent from "@/order-operation-and-monitoring/components/purchase-order-list.component.vue";
-import SideNavbar from "@/public/components/side-navbar.vue";
-import ToolbarContent from "@/public/components/toolbar-content.component.vue";
 
 export default {
   name: 'PurchaseOrder',
   components: {
-    ToolbarContent,
-    SideNavbar,
     PurchaseOrderListComponent
   },
   props: {

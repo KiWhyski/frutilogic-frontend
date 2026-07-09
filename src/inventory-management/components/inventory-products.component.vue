@@ -1,14 +1,11 @@
 <script>
-import { InventoryService } from "@/inventory-management/services/inventory.service.js";
+import {
+  getInventoryErrorMessage,
+  InventoryService,
+} from "@/inventory-management/services/inventory.service.js";
 import { ProductService } from "@/inventory-management/services/product.service.js";
 import { WarehouseService } from "@/inventory-management/services/warehouse.service.js";
 import { Select as PvSelect } from "primevue";
-
-/** Destinos solo para demo si no hay más almacenes reales */
-const DEMO_TRANSFER_WAREHOUSES = [
-  { warehouseId: "wh-demo-norte", name: "Almacén demo — Norte" },
-  { warehouseId: "wh-demo-sur", name: "Almacén demo — Sur" },
-];
 
 const inventoryService = new InventoryService();
 const productService = new ProductService();
@@ -108,7 +105,7 @@ export default {
         this.$toast.add({
           severity: 'error',
           summary: this.$t('toast.error'),
-          detail: error.response?.data?.message || this.$t('inventory.error-past-date'),
+          detail: getInventoryErrorMessage(error, this.$t('inventory.error-past-date')),
           life: 5000
         });
       }
@@ -137,18 +134,6 @@ export default {
       options = options.filter((w) => w.warehouseId !== this.warehouseId);
 
       if (options.length === 0) {
-        options = DEMO_TRANSFER_WAREHOUSES.filter((w) => w.warehouseId !== this.warehouseId);
-        if (options.length > 0) {
-          this.$toast.add({
-            severity: 'info',
-            summary: this.$t('toast.info'),
-            detail: this.$t('inventory.transfer-no-targets'),
-            life: 3500,
-          });
-        }
-      }
-
-      if (options.length === 0) {
         this.$toast.add({
           severity: 'error',
           summary: this.$t('toast.error'),
@@ -162,23 +147,49 @@ export default {
       this.transferTargetWarehouseId = options[0].warehouseId;
       this.transferDialogVisible = true;
     },
-    confirmTransferDemo() {
+    async confirmTransfer() {
       if (!this.transferTargetWarehouseId) return;
       const target = this.transferWarehouseOptions.find(
         (w) => w.warehouseId === this.transferTargetWarehouseId
       );
       const n = this.transferSelectedCount;
-      this.$toast.add({
-        severity: 'success',
-        summary: this.$t('toast.success'),
-        detail: this.$t('inventory.transfer-success-demo', {
-          count: n,
-          warehouse: target?.name ?? this.transferTargetWarehouseId,
-        }),
-        life: 4500,
-      });
-      this.transferDialogVisible = false;
-      this.selectedProducts = null;
+      if (this.selectedProducts.some((product) => product.currentStock <= 0)) {
+        this.$toast.add({
+          severity: 'error',
+          summary: this.$t('toast.error'),
+          detail: this.$t('inventory.stock-reduced-error'),
+          life: 5000,
+        });
+        return;
+      }
+
+      try {
+        await Promise.all(this.selectedProducts.map((product) =>
+          inventoryService.transferProduct(
+            product.productId,
+            this.warehouseId,
+            this.transferTargetWarehouseId,
+            product.currentStock,
+            product.bestBeforeDate
+          )
+        ));
+        this.$toast.add({
+          severity: 'success',
+          summary: this.$t('toast.success'),
+          detail: `${n} producto(s) transferido(s) a «${target?.name ?? this.transferTargetWarehouseId}».`,
+          life: 4500,
+        });
+        this.transferDialogVisible = false;
+        this.selectedProducts = null;
+        await this.refreshProducts();
+      } catch (error) {
+        this.$toast.add({
+          severity: 'error',
+          summary: this.$t('toast.error'),
+          detail: getInventoryErrorMessage(error),
+          life: 5000,
+        });
+      }
     },
     async refreshProducts() {
       if (!this.warehouseId) {
@@ -269,20 +280,18 @@ export default {
         this.$toast.add({
           severity: 'error',
           summary: 'Error',
-          detail: error.response?.data?.message || 'Error processing stock operation',
+          detail: getInventoryErrorMessage(error, 'Error processing stock operation'),
           life: 5000
         });
       }
     },
     async handleDeleteProduct() {
       try {
-        const expirationDate = this.product.bestBeforeDate;
+        if (this.product.currentStock !== 0) {
+          throw new Error(this.$t('inventory.delete-product-current-stock'));
+        }
 
-        await inventoryService.deleteProduct(
-            this.product.productId,
-            this.warehouseId,
-            expirationDate
-        );
+        await inventoryService.deleteInventory(this.product.inventoryId);
 
         this.$toast.add({
           severity: 'success',
@@ -299,7 +308,7 @@ export default {
         this.$toast.add({
           severity: 'error',
           summary: this.$t('toast.error'),
-          detail: error.response?.data?.message || this.$t('inventory.delete-product-current-stock'),
+          detail: getInventoryErrorMessage(error, this.$t('inventory.delete-product-current-stock')),
           life: 5000
         });
 
@@ -317,6 +326,7 @@ export default {
       switch (status) {
         case 'WithStock': return 'success';
         case 'OutOfStock': return 'danger';
+        case 'LowStock': return 'warning';
         default: return null;
       }
     }
@@ -637,7 +647,7 @@ export default {
             icon="pi pi-check"
             class="p-button-success"
             :disabled="!transferTargetWarehouseId"
-            @click="confirmTransferDemo"
+            @click="confirmTransfer"
           />
         </template>
       </pv-dialog>

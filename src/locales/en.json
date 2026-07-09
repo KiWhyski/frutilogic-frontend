@@ -137,6 +137,7 @@
   },
   "orders": {
     "title": "Orders",
+    "actions": "Actions",
     "no-access-title": "Orders unavailable",
     "no-access-lede": "Your account cannot access purchases or orders. Only fruit store owner or supplier profiles can use this section.",
     "new-order": "New Order"
@@ -189,7 +190,8 @@
     "best-date-before": "Best Date Before",
     "status": {
       "WithStock": "In Stock",
-      "OutOfStock": "Out of Stock"
+      "OutOfStock": "Out of Stock",
+      "LowStock": "Low Stock"
     },
     "valid-date": "You must enter a valid date.",
     "stock-added": "Stock added successfully!",

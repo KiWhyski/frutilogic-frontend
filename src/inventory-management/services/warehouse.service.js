@@ -140,13 +140,13 @@ export class WarehouseService extends BaseService {
     #createWarehouseFormData(warehouseData, imageFile) {
         const formData = new FormData();
         formData.append('Name', warehouseData.name);
-        formData.append('Street', warehouseData.street);
-        formData.append('City', warehouseData.city);
-        formData.append('District', warehouseData.district);
-        formData.append('PostalCode', warehouseData.postalCode);
-        formData.append('Country', warehouseData.country);
-        formData.append('MaxTemperature', warehouseData.maxTemperature);
-        formData.append('MinTemperature', warehouseData.minTemperature);
+        formData.append('AddressStreet', warehouseData.street);
+        formData.append('AddressCity', warehouseData.city);
+        formData.append('AddressDistrict', warehouseData.district);
+        formData.append('AddressPostalCode', warehouseData.postalCode);
+        formData.append('AddressCountry', warehouseData.country);
+        formData.append('TemperatureMax', warehouseData.maxTemperature);
+        formData.append('TemperatureMin', warehouseData.minTemperature);
         formData.append('Capacity', warehouseData.capacity);
 
         if (imageFile) {

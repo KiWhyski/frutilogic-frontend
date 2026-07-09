@@ -1,7 +1,9 @@
 <script>
-import axios from "axios";
 import { isFrontendOnly } from "@/shared/config/frontend-only.js";
-import { getBackendBaseUrl } from "@/shared/config/backend-url.js";
+import httpInstance from "@/shared/services/http.instance.js";
+import { ProductService } from "@/inventory-management/services/product.service.js";
+
+const productService = new ProductService();
 
 export default {
   name: "stock-settings-modal",
@@ -36,14 +38,13 @@ export default {
           ];
           return;
         }
-        const base = getBackendBaseUrl();
-        if (!base) {
-          this.products = [];
-          this.error = null;
-          return;
-        }
-        const res = await axios.get(`${base}/products`);
-        this.products = res.data;
+        const { data } = await productService.getAllByAccountId();
+        this.products = data.map(product => ({
+          id: product.productId,
+          name: product.name,
+          current: product.totalStockInStore,
+          min: product.minimumStock,
+        }));
       } catch (err) {
         this.error = "Error loading products";
         console.error(err);
@@ -58,11 +59,8 @@ export default {
           this.$emit('stock-updated');
           return;
         }
-        const base = getBackendBaseUrl();
-        if (!base) return;
-        await axios.put(`${base}/products/${product.id}`, {
-          ...product,
-          min: product.min
+        await httpInstance.patch(`products/${product.id}/minimum-stock`, {
+          newMinimumStock: product.min
         });
         this.$emit('stock-updated');
       } catch (err) {
@@ -108,8 +106,7 @@ export default {
                 <input 
                   type="number" 
                   v-model.number="product.min" 
-                  min="0"
-                  :max="product.current"
+                  min="1"
                   class="stock-input"
                 >
               </td>

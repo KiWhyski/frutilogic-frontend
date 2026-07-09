@@ -58,7 +58,7 @@ export default {
       this.showSettings = false;
     },
     handleSettingsUpdated() {
-      this.$emit("settings-updated");
+      this.$emit("alerts-updated");
     }
   }
 };

@@ -12,44 +12,42 @@
           <h3>{{ $t('catalog.add-product') }}</h3>
 
           <div class="field">
-            <label>{{ $t('catalog.name') }}</label>
-            <InputText class="Input" v-model="newProduct.name" />
+            <label>Almacén</label>
+            <select class="Input" v-model="selectedWarehouseId" :disabled="isEditMode" @change="loadWarehouseProducts">
+              <option value="">Selecciona un almacén</option>
+              <option v-for="warehouse in warehouses" :key="warehouse.warehouseId || warehouse.id"
+                      :value="warehouse.warehouseId || warehouse.id">
+                {{ warehouse.name }}
+              </option>
+            </select>
           </div>
           <div class="field">
-            <label>{{ $t('catalog.type') }}</label>
-            <InputText class="Input" v-model="newProduct.productType" />
+            <label>Producto con stock</label>
+            <select class="Input" v-model="selectedProductId">
+              <option value="">Selecciona un producto</option>
+              <option v-for="product in availableProducts" :key="product.productId" :value="product.productId">
+                {{ product.name }} ({{ product.quantity }} disponibles)
+              </option>
+            </select>
           </div>
           <div class="field">
-            <label>{{ $t('catalog.brand') }}</label>
-            <InputText class="Input" v-model="newProduct.brand" />
-          </div>
-          <div class="field">
-            <label>{{ $t('catalog.content-kg') }}</label>
-            <pv-input-number
-                v-model="newProduct.content"
-                :min="0"
-                inputStyle="background-color: white; color: black; padding: 0.5rem; border: 3px solid #26021C; border-radius: 15px;"
-            />
-
-          </div>
-          <div class="field">
-            <label>{{ $t('catalog.price-pen') }}</label>
-            <pv-input-number
-                v-model="newProduct.price"
-                mode="currency"
-                currency="PEN"
-                locale="es-PE"
-                :min="0"
-                inputStyle="background-color: white; color: black; padding: 0.5rem; border: 3px solid #26021C; border-radius: 15px;"
-            />
+            <label>Stock a publicar</label>
+            <pv-input-number v-model="stockToPublish" :min="1" :max="selectedProductStock" />
           </div>
 
           <div class="buttons">
             <Button :label="$t('catalog.save')" @click="onSave" class="p-button-primary" />
+            <Button label="Agregar producto" @click="addProduct" :disabled="!isEditMode" class="p-button-primary" />
             <Button :label="$t('catalog.reset')" @click="resetForm" class="p-button-secondary" />
           </div>
 
           <div v-if="showError" class="error">{{ $t('catalog.complete-fields') }}</div>
+          <ul v-if="catalogItems.length">
+            <li v-for="item in catalogItems" :key="item.id">
+              {{ item.name }} — {{ item.availableStock }} disponibles
+              <Button icon="pi pi-trash" text severity="danger" @click="removeProduct(item.id)" />
+            </li>
+          </ul>
         </div>
       </div>
     </div>
@@ -57,10 +55,12 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { CatalogService } from '@/order-operation-and-monitoring/services/catalog.service';
 import { useAuthenticationStore } from '@/authentication/services/authentication.store';
+import { WarehouseService } from '@/inventory-management/services/warehouse.service';
+import { InventoryService } from '@/inventory-management/services/inventory.service';
 
 import SideNavbar from '@/public/components/side-navbar.vue';
 import ToolbarContent from '@/public/components/toolbar-content.component.vue';
@@ -81,15 +81,33 @@ export default {
     const route = useRoute();
     const catalogService = new CatalogService();
     const authStore = useAuthenticationStore();
+    const warehouseService = new WarehouseService();
+    const inventoryService = new InventoryService();
 
     const catalog = ref({ catalogId: 0, name: '', accountId: '', isPublished: false });
     const catalogItems = ref([]);
     const isEditMode = ref(false);
     const showError = ref(false);
 
-    const newProduct = ref({
-      name: '', productType: '', content: 0, brand: '', price: null
-    });
+    const warehouses = ref([]);
+    const warehouseProducts = ref([]);
+    const selectedWarehouseId = ref('');
+    const selectedProductId = ref('');
+    const stockToPublish = ref(1);
+    const availableProducts = computed(() =>
+      warehouseProducts.value.filter(product =>
+        Number(product.currentStock ?? product.quantity ?? product.Quantity ?? 0) > 0 &&
+        !catalogItems.value.some(item => item.id === (product.productId ?? product.ProductId))
+      ).map(product => ({
+        ...product,
+        productId: product.productId ?? product.ProductId,
+        name: product.name ?? product.Name ?? 'Producto',
+        quantity: Number(product.currentStock ?? product.quantity ?? product.Quantity ?? 0)
+      }))
+    );
+    const selectedProductStock = computed(() =>
+      availableProducts.value.find(product => product.productId === selectedProductId.value)?.quantity ?? 1
+    );
 
     const loadCatalogItems = async () => {
       if (!catalog.value.catalogId) return;
@@ -104,12 +122,25 @@ export default {
         isEditMode.value = true;
         const loaded = await catalogService.getCatalogById(String(id));
         catalog.value = { ...loaded, catalogId: loaded.id };
+        selectedWarehouseId.value = loaded.warehouseId || '';
+        if (selectedWarehouseId.value) await loadWarehouseProducts();
         await loadCatalogItems();
       }
     };
 
+    const loadWarehouseProducts = async () => {
+      selectedProductId.value = '';
+      warehouseProducts.value = selectedWarehouseId.value
+        ? await inventoryService.getAllProductsByWarehouseId(selectedWarehouseId.value)
+        : [];
+    };
+
     const onSave = async () => {
       if (!catalog.value.name.trim()) {
+        showError.value = true;
+        return;
+      }
+      if (!isEditMode.value && !selectedWarehouseId.value) {
         showError.value = true;
         return;
       }
@@ -124,6 +155,7 @@ export default {
         name: catalog.value.name.trim(),
         description: catalog.value.name.trim(),
         contactEmail: authStore.currentUsername || 'contacto@frutilogic.com',
+        warehouseId: selectedWarehouseId.value,
       };
 
       try {
@@ -140,25 +172,56 @@ export default {
       }
     };
 
-    const resetForm = () => {
-      newProduct.value = {
-        name: '',
-        productType: '',
-        content: 0,
-        brand: '',
-        price: null
-      };
+    const addProduct = async () => {
+      const quantity = Number(stockToPublish.value);
+      if (!selectedProductId.value || quantity < 1 || quantity > selectedProductStock.value) {
+        showError.value = true;
+        return;
+      }
+      await catalogService.addCatalogItem({
+        catalogId: catalog.value.catalogId || catalog.value.id,
+        productId: selectedProductId.value,
+        warehouseId: selectedWarehouseId.value,
+        stock: quantity
+      });
+      await loadCatalogItems();
+      await loadWarehouseProducts();
+      stockToPublish.value = 1;
+      showError.value = false;
     };
 
-    onMounted(loadCatalog);
+    const removeProduct = async (productId) => {
+      await catalogService.deleteCatalogItem(catalog.value.catalogId || catalog.value.id, productId);
+      await loadCatalogItems();
+      await loadWarehouseProducts();
+    };
+
+    const resetForm = () => {
+      selectedProductId.value = '';
+      stockToPublish.value = 1;
+      showError.value = false;
+    };
+
+    onMounted(async () => {
+      warehouses.value = await warehouseService.getWarehousesByAccountId();
+      await loadCatalog();
+    });
 
     return {
       catalog,
       catalogItems,
       isEditMode,
-      newProduct,
+      warehouses,
+      availableProducts,
+      selectedWarehouseId,
+      selectedProductId,
+      selectedProductStock,
+      stockToPublish,
       showError,
       onSave,
+      addProduct,
+      removeProduct,
+      loadWarehouseProducts,
       resetForm
     };
   }
