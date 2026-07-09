@@ -1,10 +1,12 @@
 <script>
 import { ref, reactive, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import ProfileEdit from './profile-edit.component.vue';
 import SideNavbar from '@/public/components/side-navbar.vue';
 import ToolbarContent from '@/public/components/toolbar-content.component.vue';
 import { useAuthenticationStore } from '@/authentication/services/authentication.store.js';
 import profileService from '@/profile-management/services/profile.service.js';
+import { SubscriptionService } from '@/payment-and-subscriptions/services/subscription.service.js';
 import { useI18n } from 'vue-i18n';
 import { isFruitStoreOwner, normalizeAccountRole } from '@/shared/utils/account-role.js';
 
@@ -18,8 +20,11 @@ export default {
   setup() {
     const fileInput = ref(null);
     const authStore = useAuthenticationStore();
+    const router = useRouter();
     const { t } = useI18n();
     const loading = ref(true);
+    const currentPlanType = ref('');
+    const currentPlanStatus = ref('');
 
     const userData = reactive({
       profileId: 0,
@@ -39,6 +44,8 @@ export default {
       return '—';
     });
 
+    const planLabel = computed(() => currentPlanType.value || t('profile.plan-unknown'));
+
     onMounted(async () => {
       try {
         const profile = await profileService.getMyProfile();
@@ -50,6 +57,20 @@ export default {
         userData.email = authStore.currentUsername || '';
         userData.name = authStore.currentUsername || '';
         userData.role = normalizeAccountRole(authStore.account?.accountRole);
+      }
+
+      try {
+        const accountId = authStore.currentAccountId || localStorage.getItem('accountId');
+        if (accountId) {
+          const subscriptionService = new SubscriptionService();
+          const sub = await subscriptionService.getCurrentSubscription(accountId);
+          currentPlanType.value = sub?.planType ?? sub?.PlanType ?? '';
+          currentPlanStatus.value = sub?.status ?? sub?.Status ?? '';
+        }
+      } catch (error) {
+        if (error?.response?.status !== 404) {
+          console.warn('Could not load subscription for profile:', error);
+        }
       } finally {
         loading.value = false;
       }
@@ -69,13 +90,20 @@ export default {
       }
     };
 
+    const goToPlans = () => {
+      router.push({ name: 'PlanChoose' });
+    };
+
     return {
       userData,
       loading,
       fileInput,
       uploadNewPhoto,
       onFileSelected,
-      roleLabel
+      roleLabel,
+      planLabel,
+      currentPlanStatus,
+      goToPlans
     };
   },
 };
@@ -119,6 +147,17 @@ export default {
               <p class="apple-section-label profile-aside__role-label">{{ $t('profile.role-label') }}</p>
               <div class="role-pill apple-elevated">
                 <span class="role-pill__text">{{ roleLabel }}</span>
+              </div>
+
+              <p class="apple-section-label profile-aside__role-label">{{ $t('profile.current-plan') }}</p>
+              <div class="plan-card apple-elevated">
+                <p class="plan-card__name">{{ planLabel }}</p>
+                <p v-if="currentPlanStatus" class="plan-card__status">
+                  {{ $t('profile.plan-status', { status: currentPlanStatus }) }}
+                </p>
+                <button type="button" class="plan-card__btn" @click="goToPlans">
+                  {{ $t('profile.manage-plan') }}
+                </button>
               </div>
             </aside>
 
@@ -336,6 +375,45 @@ export default {
 
 .role-pill__text {
   letter-spacing: -0.02em;
+}
+
+.plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem 1.15rem;
+  box-sizing: border-box;
+}
+
+.plan-card__name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--profile-title-color);
+}
+
+.plan-card__status {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--apple-label);
+}
+
+.plan-card__btn {
+  margin-top: 0.5rem;
+  align-self: flex-start;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: var(--apple-input-radius);
+  border: none;
+  cursor: pointer;
+  background: var(--stocksip-green);
+  color: #fff;
+}
+
+.plan-card__btn:hover {
+  background: var(--stocksip-green-hover);
 }
 
 .visually-hidden {

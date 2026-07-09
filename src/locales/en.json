@@ -37,6 +37,66 @@
     "profile": "Profile",
     "sign-out": "Sign Out"
   },
+  "plans-page": {
+    "badge-recommended": "Recommended",
+    "price-free": "Free",
+    "per-month": "per month",
+    "per-year": "per year",
+    "feature-warehouses": "Max warehouses: {n}",
+    "feature-products": "Max products: {n}",
+    "feature-type": "Type: {type}",
+    "type-free": "Free",
+    "type-premium": "Premium",
+    "btn-current": "Current plan",
+    "btn-unavailable": "Unavailable",
+    "btn-choose": "Choose plan",
+    "btn-subscribe": "Subscribe",
+    "load-error": "Could not load plans.",
+    "checkout-error": "Could not start Mercado Pago checkout.",
+    "no-account": "No active account. Please sign in again.",
+    "redirecting": "Redirecting to Mercado Pago…",
+    "success-title": "Payment received!",
+    "success-checking": "Confirming your subscription…",
+    "success-message": "Your subscription was activated successfully.",
+    "success-plan": "Plan: {plan}",
+    "success-pending": "Payment is processing. Your plan will activate shortly.",
+    "go-dashboard": "Go to Dashboard",
+    "go-plans": "View plans",
+    "cancel-title": "Payment cancelled",
+    "cancel-message": "The payment was cancelled or rejected. You can try again from Plans.",
+    "cards": {
+      "free": {
+        "title": "Free",
+        "unitsLine": "Get started with FrutiLogic",
+        "billingLine": "No cost. Basic inventory limits.",
+        "features": [
+          "Basic fruit inventory and warehouses.",
+          "Essential stock alerts.",
+          "Great for trying the platform."
+        ]
+      },
+      "premium": {
+        "title": "Premium",
+        "unitsLine": "For growing fruit stores",
+        "billingLine": "Monthly payment with Mercado Pago (PEN).",
+        "features": [
+          "More products and warehouses.",
+          "Expanded alerts and catalogs.",
+          "Priority support on business days."
+        ]
+      },
+      "enterprise": {
+        "title": "Enterprise",
+        "unitsLine": "For larger operations",
+        "billingLine": "Yearly payment with Mercado Pago (PEN).",
+        "features": [
+          "Maximum product and warehouse capacity.",
+          "Full purchase and sales flows.",
+          "Built for fruit-store networks."
+        ]
+      }
+    }
+  },
   "warehouses": {
     "title": "Warehouses",
     "address": "Address",
@@ -225,7 +285,14 @@
     "col-content": "Weight (kg)"
   },
   "profile": {
-    "title": "Profile"
+    "title": "Profile",
+    "section-profile": "Profile",
+    "role-label": "Role",
+    "choose-photo": "Choose photo",
+    "current-plan": "Current plan",
+    "plan-unknown": "No plan",
+    "manage-plan": "View plans and pay",
+    "plan-status": "Status: {status}"
   },
   "No hay predicciones registradas aún": "No predictions registered yet",
   "Reconocimiento de Imágenes": "Image Recognition",

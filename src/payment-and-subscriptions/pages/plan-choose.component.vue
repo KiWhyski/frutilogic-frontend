@@ -4,42 +4,53 @@ import PlanList from "@/payment-and-subscriptions/components/plan-list.component
 import { SubscriptionService } from "@/payment-and-subscriptions/services/subscription.service.js";
 import SideNavbar from "@/public/components/side-navbar.vue";
 import ToolbarContent from "@/public/components/toolbar-content.component.vue";
+import { useAuthenticationStore } from "@/authentication/services/authentication.store.js";
 
-/** Dos planes fijos en UI (es-ES); se enlazan los planId del API por posición cuando existen. */
-const CATALOG_SLOTS = [
-  { catalogKey: "esencial", tier: 0, fallbackPlanId: "plan_esencial" },
-  { catalogKey: "estandar", tier: 1, fallbackPlanId: "plan_estandar" },
-];
+/** UI catalog slots mapped by API planType (not array index). */
+const CATALOG_BY_TYPE = {
+  Free: { catalogKey: "free", tier: 0 },
+  Premium: { catalogKey: "premium", tier: 1 },
+  Enterprise: { catalogKey: "enterprise", tier: 2 },
+};
 
 export default {
   name: "payment-choose",
   components: { PlanList, SideNavbar, ToolbarContent },
   data() {
     return {
-      apiPlans: [],
       displayPlans: [],
       currentPlanId: null,
+      currentSubscriptionId: null,
+      currentPlanType: null,
       error: null,
+      loading: false,
+      checkoutLoading: false,
     };
   },
   computed: {
     currentTier() {
       const row = this.displayPlans.find((p) => p.planId === this.currentPlanId);
-      return row ? row.tier : -1;
+      if (row) return row.tier;
+      const byType = CATALOG_BY_TYPE[this.currentPlanType];
+      return byType ? byType.tier : -1;
     },
   },
   methods: {
-    buildDisplayPlans() {
-      this.displayPlans = CATALOG_SLOTS.map((slot, i) => {
-        const raw = this.apiPlans[i];
-        const api = raw && typeof raw === "object" ? { ...raw } : {};
-        return {
-          ...api,
-          catalogKey: slot.catalogKey,
-          tier: slot.tier,
-          planId: api.planId ?? slot.fallbackPlanId,
-        };
-      });
+    mapApiPlan(raw) {
+      const planType = raw.planType ?? raw.PlanType ?? "Free";
+      const slot = CATALOG_BY_TYPE[planType] || CATALOG_BY_TYPE.Free;
+      return {
+        planId: raw.planId ?? raw.PlanId ?? raw.id ?? raw.Id,
+        planType,
+        description: raw.description ?? raw.Description ?? "",
+        price: Number(raw.price ?? raw.Price ?? raw.amount ?? 0),
+        currency: raw.currency ?? raw.Currency ?? "PEN",
+        maxProducts: raw.maxProducts ?? raw.MaxProducts,
+        maxWarehouses: raw.maxWarehouses ?? raw.MaxWarehouses,
+        maxUsers: raw.maxUsers ?? raw.MaxUsers,
+        catalogKey: slot.catalogKey,
+        tier: slot.tier,
+      };
     },
 
     async getAllPlans() {
@@ -47,46 +58,72 @@ export default {
       try {
         const planService = new PlanService();
         const data = await planService.getAllPlans();
-        this.apiPlans = Array.isArray(data) ? data : [];
-        this.buildDisplayPlans();
+        const list = Array.isArray(data) ? data : [];
+        this.displayPlans = list
+          .map((p) => this.mapApiPlan(p))
+          .filter((p) => p.planId)
+          .sort((a, b) => a.tier - b.tier);
       } catch (error) {
         this.error = this.$t("plans-page.load-error");
         console.error(error);
-        this.apiPlans = [];
-        this.buildDisplayPlans();
+        this.displayPlans = [];
       }
     },
 
     async checkCurrentPlanAndLoad() {
+      this.loading = true;
       try {
-        const accountId = localStorage.getItem("accountId");
+        const authStore = useAuthenticationStore();
+        const accountId = authStore.currentAccountId || localStorage.getItem("accountId");
         if (accountId) {
           const subscriptionService = new SubscriptionService();
-          const data = await subscriptionService.getCurrentSubscription(accountId);
-          this.currentPlanId = data?.planId ?? null;
+          try {
+            const data = await subscriptionService.getCurrentSubscription(accountId);
+            this.currentPlanId = data?.planId ?? data?.PlanId ?? null;
+            this.currentSubscriptionId = data?.subscriptionId ?? data?.SubscriptionId ?? null;
+            this.currentPlanType = data?.planType ?? data?.PlanType ?? null;
+          } catch (error) {
+            if (error?.response?.status !== 404) {
+              console.warn("No active subscription yet:", error);
+            }
+          }
         }
-      } catch (error) {
-        console.warn("No active subscription yet:", error);
       } finally {
         await this.getAllPlans();
+        this.loading = false;
       }
     },
 
     async subscribeToPlan(planId) {
+      this.error = null;
+      this.checkoutLoading = true;
       try {
-        const accountId = localStorage.getItem("accountId");
-        const subscriptionService = new SubscriptionService();
-        const data = await subscriptionService.subscribeToPlan(planId, accountId);
-
-        if (data?.initPoint) {
-          window.location.href = data.initPoint;
+        const authStore = useAuthenticationStore();
+        const accountId = authStore.currentAccountId || localStorage.getItem("accountId");
+        if (!accountId) {
+          this.error = this.$t("plans-page.no-account");
           return;
         }
 
+        const subscriptionService = new SubscriptionService();
+        const data = await subscriptionService.startCheckout(planId, accountId);
+        const initPoint = data?.initPoint ?? data?.InitPoint;
+
+        if (initPoint) {
+          window.location.href = initPoint;
+          return;
+        }
+
+        // Free plan activated without Mercado Pago redirect
         this.$router?.push({ name: "Dashboard" });
       } catch (err) {
         console.error("Error subscribing to plan:", err);
-        this.error = this.$t("plans-page.load-error");
+        this.error =
+          err?.response?.data?.detail ||
+          err?.response?.data?.message ||
+          this.$t("plans-page.checkout-error");
+      } finally {
+        this.checkoutLoading = false;
       }
     },
   },
@@ -103,7 +140,9 @@ export default {
       <toolbar-content :page-title="$t('toolbar.plans')" />
       <div class="plan-list-wrapper">
         <p v-if="error" class="plan-page-error" role="alert">{{ error }}</p>
+        <p v-if="checkoutLoading" class="plan-page-loading">{{ $t("plans-page.redirecting") }}</p>
         <plan-list
+          v-if="!loading"
           :plans="displayPlans"
           :current-plan-id="currentPlanId"
           :current-tier="currentTier"
@@ -143,6 +182,13 @@ export default {
   margin: 0 auto 1rem;
   max-width: 960px;
   color: #b00020;
+  font-size: 0.9375rem;
+}
+
+.plan-page-loading {
+  margin: 0 auto 1rem;
+  max-width: 960px;
+  color: #333;
   font-size: 0.9375rem;
 }
 </style>

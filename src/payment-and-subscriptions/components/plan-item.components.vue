@@ -11,20 +11,21 @@ export default {
   },
   computed: {
     catalogKey() {
-      return this.plan.catalogKey || "esencial";
+      return this.plan.catalogKey || "free";
     },
     cardMessages() {
       return this.$tm(`plans-page.cards.${this.catalogKey}`) || {};
     },
-    /** Precio desde el API (como antes); texto i18n para “Gratis” / “al mes”. */
+    /** Precio desde el API; texto i18n para “Gratis” / “al mes”. */
     formattedPrice() {
       const p = this.plan.price;
       if (!Number.isFinite(Number(p)) || Number(p) === 0) {
         return this.$t("plans-page.price-free");
       }
+      const currency = this.plan.currency || "PEN";
       return Number(p).toLocaleString("es-PE", {
         style: "currency",
-        currency: "PEN",
+        currency,
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       });
@@ -33,21 +34,24 @@ export default {
       if (this.formattedPrice === this.$t("plans-page.price-free")) {
         return this.formattedPrice;
       }
-      return `${this.formattedPrice} ${this.$t("plans-page.per-month")}`;
+      const freq = String(this.plan.planType || "").toLowerCase() === "enterprise"
+        ? this.$t("plans-page.per-year")
+        : this.$t("plans-page.per-month");
+      return `${this.formattedPrice} ${freq}`;
     },
     displayTitle() {
-      const d = this.plan.description;
-      if (d != null && String(d).trim() !== "") {
-        return String(d).trim();
-      }
-      return this.cardMessages.title || "";
+      return this.cardMessages.title || this.plan.description || this.plan.planType || "";
     },
     featureList() {
       const m = this.cardMessages;
-      if (m && Array.isArray(m.features)) {
-        return m.features;
+      const fromI18n = m && Array.isArray(m.features) ? [...m.features] : [];
+      if (this.plan.maxWarehouses != null) {
+        fromI18n.unshift(this.$t("plans-page.feature-warehouses", { n: this.plan.maxWarehouses }));
       }
-      return [];
+      if (this.plan.maxProducts != null) {
+        fromI18n.unshift(this.$t("plans-page.feature-products", { n: this.plan.maxProducts }));
+      }
+      return fromI18n;
     },
     isCurrentPlan() {
       return this.plan.planId === this.currentPlanId;

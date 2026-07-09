@@ -1,54 +1,83 @@
 <script>
-import { onMounted } from 'vue'
-import {useRoute, useRouter} from 'vue-router'
-import { SubscriptionService } from "@/payment-and-subscriptions/services/subscription.service.js"
-import {useAuthenticationStore} from "@/authentication/services/authentication.store.js";
+import { onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
+import { SubscriptionService } from "@/payment-and-subscriptions/services/subscription.service.js";
+import { useAuthenticationStore } from "@/authentication/services/authentication.store.js";
 
 export default {
   name: "payment-success",
   setup() {
-    const route = useRoute()
-    const router = useRouter()
-    const authStore = useAuthenticationStore()
-    const subscriptionService = new SubscriptionService()
+    const router = useRouter();
+    const authStore = useAuthenticationStore();
+    const subscriptionService = new SubscriptionService();
+    const status = ref("checking");
+    const planLabel = ref("");
 
     onMounted(async () => {
-      const token = route.query.token
-      const accountId = route.query.accountId
-      const planId = route.query.planId
-
-      if (!token || !accountId || !planId) {
-        return router.push({ name: 'sign-in' })
+      const accountId = authStore.currentAccountId || localStorage.getItem("accountId");
+      if (!accountId) {
+        status.value = "ok";
+        return;
       }
 
       try {
-        const response = await subscriptionService.completeSubscription(token, accountId, planId)
-        console.log('Complete subscription:', response)
+        // Webhook activates the plan; poll a few times in case MP is slightly delayed.
+        for (let i = 0; i < 5; i++) {
+          try {
+            const data = await subscriptionService.getCurrentSubscription(accountId);
+            const planStatus = String(data?.status || "").toLowerCase();
+            if (planStatus === "active" || data?.planType) {
+              planLabel.value = data?.planType || "";
+              status.value = "ok";
+              return;
+            }
+          } catch {
+            // keep polling
+          }
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+        status.value = "pending";
       } catch (error) {
-        console.error('Error completing subscription:', error)
+        console.error("Error checking subscription after payment:", error);
+        status.value = "pending";
       }
-    })
+    });
 
     const goToDashboard = () => {
-      router.push('/dashboard')
-    }
+      router.push("/dashboard");
+    };
+
+    const goToPlans = () => {
+      router.push({ name: "PlanChoose" });
+    };
 
     return {
-      goToDashboard
-    }
-  }
-}
+      status,
+      planLabel,
+      goToDashboard,
+      goToPlans,
+    };
+  },
+};
 </script>
 
 <template>
   <div class="confirmation-container">
     <div class="card">
-      <h2 class="title">¡Suscripción activada!</h2>
-      <p class="message">Tu suscripción ha sido activada correctamente.</p>
-      <p class="message">¡Gracias por tu compra!</p>
-      <p class="message">Ahora puedes disfrutar de los beneficios de tu plan.</p>
+      <h2 class="title">{{ $t("plans-page.success-title") }}</h2>
+      <p v-if="status === 'checking'" class="message">{{ $t("plans-page.success-checking") }}</p>
+      <template v-else-if="status === 'ok'">
+        <p class="message">{{ $t("plans-page.success-message") }}</p>
+        <p v-if="planLabel" class="message">{{ $t("plans-page.success-plan", { plan: planLabel }) }}</p>
+      </template>
+      <template v-else>
+        <p class="message">{{ $t("plans-page.success-pending") }}</p>
+      </template>
       <button class="dashboard-button" @click="goToDashboard">
-        Ir al Dashboard
+        {{ $t("plans-page.go-dashboard") }}
+      </button>
+      <button class="secondary-button" @click="goToPlans">
+        {{ $t("plans-page.go-plans") }}
       </button>
     </div>
   </div>
@@ -100,5 +129,17 @@ export default {
 
 .dashboard-button:hover {
   background-color: var(--app-green-accent-hover, #15803d);
+}
+
+.secondary-button {
+  margin-top: 0.75rem;
+  margin-left: 0.5rem;
+  padding: 0.8rem 2rem;
+  background: transparent;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 45px;
+  font-size: 1rem;
+  cursor: pointer;
 }
 </style>

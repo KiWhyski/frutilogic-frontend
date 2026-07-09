@@ -96,6 +96,7 @@
     "badge-recommended": "Recomendado",
     "price-free": "Gratis",
     "per-month": "al mes",
+    "per-year": "al año",
     "feature-warehouses": "Almacenes máx.: {n}",
     "feature-products": "Productos máx.: {n}",
     "feature-type": "Tipo: {type}",
@@ -106,7 +107,49 @@
     "btn-choose": "Elegir plan",
     "btn-subscribe": "Suscribirse",
     "load-error": "No se pudieron cargar los planes.",
+    "checkout-error": "No se pudo iniciar el pago con Mercado Pago.",
+    "no-account": "No hay una cuenta activa. Vuelve a iniciar sesión.",
+    "redirecting": "Redirigiendo a Mercado Pago…",
+    "success-title": "¡Pago recibido!",
+    "success-checking": "Confirmando tu suscripción…",
+    "success-message": "Tu suscripción ha sido activada correctamente.",
+    "success-plan": "Plan: {plan}",
+    "success-pending": "El pago se está procesando. En unos segundos tu plan quedará activo.",
+    "go-dashboard": "Ir al Dashboard",
+    "go-plans": "Ver planes",
+    "cancel-title": "Pago cancelado",
+    "cancel-message": "El pago fue cancelado o rechazado. Puedes intentarlo de nuevo desde Planes.",
     "cards": {
+      "free": {
+        "title": "Gratis",
+        "unitsLine": "Para empezar con FrutiLogic",
+        "billingLine": "Sin costo. Límites básicos de inventario.",
+        "features": [
+          "Inventario de frutas y almacenes básicos.",
+          "Alertas de stock esenciales.",
+          "Ideal para probar la plataforma."
+        ]
+      },
+      "premium": {
+        "title": "Premium",
+        "unitsLine": "Para fruterías en crecimiento",
+        "billingLine": "Pago mensual con Mercado Pago (PEN).",
+        "features": [
+          "Más productos y almacenes.",
+          "Alertas y catálogos ampliados.",
+          "Soporte prioritario en días hábiles."
+        ]
+      },
+      "enterprise": {
+        "title": "Enterprise",
+        "unitsLine": "Para operaciones grandes",
+        "billingLine": "Pago anual con Mercado Pago (PEN).",
+        "features": [
+          "Capacidad máxima de productos y almacenes.",
+          "Flujos de compra y ventas completos.",
+          "Pensado para redes de fruterías."
+        ]
+      },
       "esencial": {
         "title": "Esencial",
         "unitsLine": "10–15 departamentos",
@@ -449,6 +492,9 @@
     "role-label": "Rol",
     "choose-photo": "Elegir foto",
     "current-plan": "Plan actual",
+    "plan-unknown": "Sin plan",
+    "manage-plan": "Ver planes y pagar",
+    "plan-status": "Estado: {status}",
     "current-password": "Contraseña actual",
     "new-password": "Nueva contraseña",
     "confirm-password": "Confirmar contraseña",
