@@ -54,11 +54,7 @@ export class ProductService {
         const formData = this.#createProductFormData(productData, imageFile);
 
         try {
-            const response = await httpInstance.post(endpoint, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
+            const response = await httpInstance.post(endpoint, formData);
             return mapProductFromApi(response.data);
         } catch (error) {
             error.userMessage = extractApiErrorMessage(error);
@@ -69,11 +65,7 @@ export class ProductService {
     async updateProduct(productId, productData, imageFile) {
         try {
             const formData = this.#createUpdateFormData(productData, imageFile);
-            const response = await httpInstance.put(`${productsEndpoint}/${productId}`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
+            const response = await httpInstance.put(`${productsEndpoint}/${productId}`, formData);
             return mapProductFromApi(response.data);
         } catch (error) {
             error.userMessage = extractApiErrorMessage(error);

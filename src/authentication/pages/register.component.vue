@@ -4,10 +4,16 @@ import {SignUpRequest} from "../model/sign-up.request.js";
 import { extractErrorMessage } from "../services/authentication.service.js";
 import { useToast } from 'primevue/usetoast';
 import {Toast as PvToast} from "primevue";
+import { useI18n } from 'vue-i18n';
 
 export default {
   name: "register",
   components: {PvToast},
+  setup() {
+    const { t } = useI18n();
+    const toast = useToast();
+    return { t, toast };
+  },
   data() {
     return {
       hide: true,
@@ -15,7 +21,6 @@ export default {
       authenticationStore: useAuthenticationStore(),
       email: "",
       password: "",
-      toast: useToast(),
     }
   },
   methods: {
@@ -29,12 +34,12 @@ export default {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
       if (!emailRegex.test(this.email.trim())) {
-        this.toast.add({ severity: 'error', summary: this.$t('sign-up.invalid-email-title'), detail: this.$t('sign-up.invalid-email'), life: 3000 });
+        this.toast.add({ severity: 'error', summary: this.t('sign-up.invalid-email-title'), detail: this.t('sign-up.invalid-email'), life: 3000 });
         return;
       }
 
       if (this.password.length < 8) {
-        this.toast.add({ severity: 'warn', summary: this.$t('toast.error'), detail: 'La contraseña debe tener al menos 8 caracteres', life: 3000 });
+        this.toast.add({ severity: 'warn', summary: this.t('toast.error'), detail: 'La contraseña debe tener al menos 8 caracteres', life: 3000 });
         return;
       }
 
@@ -50,9 +55,8 @@ export default {
 
       try {
         await this.authenticationStore.signUp(signUpRequest, this.$router);
-        this.toast.add({ severity: 'success', summary: this.$t('toast.success'), detail: 'Cuenta creada. Bienvenido.', life: 3000 });
       } catch (error) {
-        this.toast.add({ severity: 'error', summary: this.$t('toast.error'), detail: extractErrorMessage(error), life: 4000 });
+        this.toast.add({ severity: 'error', summary: this.t('toast.error'), detail: extractErrorMessage(error), life: 4000 });
       } finally {
         this.loading = false;
       }

@@ -5,9 +5,15 @@ import {SignInRequest} from "@/authentication/model/sign-in.request.js";
 import { extractErrorMessage } from "@/authentication/services/authentication.service.js";
 import {Toast as PvToast} from "primevue";
 import {useToast} from "primevue/usetoast";
+import { useI18n } from 'vue-i18n';
 export default {
   name: "login",
   components: {PvToast},
+  setup() {
+    const { t } = useI18n();
+    const toast = useToast();
+    return { t, toast };
+  },
   data() {
     return {
       hide: true,
@@ -16,7 +22,6 @@ export default {
       authenticationStore: useAuthenticationStore(),
       rememberMe: false,
       accountType: '',
-      toast: useToast(),
     }
   },
   methods: {
@@ -33,8 +38,8 @@ export default {
       if (!this.username?.trim() || !this.password) {
         this.toast.add({
           severity: 'warn',
-          summary: this.$t('toast.error'),
-          detail: this.$t('sign-in.invalid-credentials'),
+          summary: this.t('toast.error'),
+          detail: this.t('sign-in.invalid-credentials'),
           life: 3000
         });
         return;
@@ -46,7 +51,7 @@ export default {
       } catch (error) {
         this.toast.add({
           severity: 'error',
-          summary: this.$t('toast.error'),
+          summary: this.t('toast.error'),
           detail: extractErrorMessage(error),
           life: 4000
         });

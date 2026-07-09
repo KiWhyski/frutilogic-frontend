@@ -86,11 +86,7 @@ export class WarehouseService extends BaseService {
 
         const formData = this.#createWarehouseFormData(warehouseData, imageFile);
 
-        const response = await httpInstance.post(endpoint, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        });
+        const response = await httpInstance.post(endpoint, formData);
         return response.data;
     }
 
@@ -123,11 +119,7 @@ export class WarehouseService extends BaseService {
         const endpoint = `${this.resourceEndpoint}/${warehouseId}`;
         const formData = this.#createWarehouseFormData(warehouseData, imageFile);
 
-        const response = await httpInstance.put(endpoint, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        })
+        const response = await httpInstance.put(endpoint, formData);
 
         return response.data;
     }
