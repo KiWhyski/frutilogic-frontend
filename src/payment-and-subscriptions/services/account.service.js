@@ -44,6 +44,10 @@ export class AccountService {
                 limits: [],
             };
         } catch (error) {
+            // New accounts may not have a subscription yet — use free-plan defaults.
+            if (error?.response?.status === 404) {
+                return { maxProducts: 10, maxWarehouses: 2, limits: [] };
+            }
             console.error("Error fetching current account benefits limits:", error);
             throw error;
         }
