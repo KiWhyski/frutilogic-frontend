@@ -1,10 +1,7 @@
-import axios from "axios";
-import { StockAlert, ExpirationAlert } from "@/alerts-and-notifications/model/alert.entity.js";
-import { getExpirationSettings } from './settings.service.js';
+import httpInstance from '@/shared/services/http.instance.js';
+import { StockAlert, ExpirationAlert } from '@/alerts-and-notifications/model/alert.entity.js';
+import { useAuthenticationStore } from '@/authentication/services/authentication.store.js';
 import { isFrontendOnly } from '@/shared/config/frontend-only.js';
-import { getBackendBaseUrl } from '@/shared/config/backend-url.js';
-
-const apiBase = () => getBackendBaseUrl();
 
 const MOCK_STOCK_ALERTS = [
     new StockAlert({ id: 'demo-p-1', name: 'Manzana Fuji', stock: 4, minStock: 10 }),
@@ -16,108 +13,105 @@ const MOCK_EXPIRATION_ALERTS = [
     new ExpirationAlert({ id: 'demo-p-3', name: 'Uva Red Globe', expiresIn: 12 }),
 ];
 
-/**
- * Fetches stock alerts with a limit of 3 items
- * @returns {Promise<Array>} Array of stock alerts
- * @throws {Error} If API request fails
- */
+async function fetchRawAlerts() {
+    if (isFrontendOnly()) {
+        return [
+            { id: '1', title: 'Manzana Fuji', message: 'Stock: 4', type: 'ProductLowStock' },
+            { id: '2', title: 'Uva Red Globe', message: 'Vence en 8 días', type: 'ProductExpired' },
+        ];
+    }
+
+    const accountId = useAuthenticationStore().currentAccountId;
+    if (!accountId) return [];
+
+    try {
+        const { data } = await httpInstance.get(`accounts/${accountId}/alerts`);
+        return Array.isArray(data) ? data : [];
+    } catch (error) {
+        if (error?.response?.status === 400) return [];
+        console.error('Error fetching alerts:', error);
+        return [];
+    }
+}
+
+function alertType(alert) {
+    return String(alert?.type ?? alert?.Type ?? '').toLowerCase();
+}
+
+function alertTitle(alert) {
+    return alert?.title ?? alert?.Title ?? 'Alerta';
+}
+
+function toStockAlert(alert) {
+    const message = String(alert?.message ?? alert?.Message ?? '');
+    const stockMatch = message.match(/(\d+)/g);
+    const stock = stockMatch ? Number(stockMatch[0]) : 0;
+    const minStock = stockMatch?.length > 1 ? Number(stockMatch[1]) : stock + 1;
+
+    return new StockAlert({
+        id: alert?.id ?? alert?.Id ?? alertTitle(alert),
+        name: alertTitle(alert),
+        stock,
+        minStock,
+    });
+}
+
+function toExpirationAlert(alert) {
+    const message = String(alert?.message ?? alert?.Message ?? '');
+    const daysMatch = message.match(/(\d+)/);
+    const expiresIn = daysMatch ? Number(daysMatch[1]) : 7;
+
+    return new ExpirationAlert({
+        id: alert?.id ?? alert?.Id ?? alertTitle(alert),
+        name: alertTitle(alert),
+        expiresIn,
+    });
+}
+
+function partitionAlerts(alerts) {
+    const stock = [];
+    const expiration = [];
+
+    for (const alert of alerts) {
+        const type = alertType(alert);
+        if (type.includes('stock')) {
+            stock.push(toStockAlert(alert));
+        } else if (type.includes('expir')) {
+            expiration.push(toExpirationAlert(alert));
+        }
+    }
+
+    return { stock, expiration };
+}
+
 export async function fetchStockAlerts() {
-    if (isFrontendOnly()) return MOCK_STOCK_ALERTS.slice(0, 3);
-    const base = apiBase();
-    if (!base) return [];
-    const res = await axios.get(`${base}/products`);
-    // Filtrar productos con stock bajo (current < min)
-    const lowStockProducts = res.data.filter(product => product.current < product.min);
-    return lowStockProducts
-        .slice(0, 3)
-        .map(item => new StockAlert({
-            id: item.id,
-            name: item.name,
-            stock: item.current,
-            minStock: item.min
-        }));
+    const { stock } = partitionAlerts(await fetchRawAlerts());
+    if (isFrontendOnly() && stock.length === 0) return MOCK_STOCK_ALERTS.slice(0, 3);
+    return stock.slice(0, 3);
 }
 
-/**
- * Fetches all stock alerts without limit
- * @returns {Promise<Array>} Array of all stock alerts
- * @throws {Error} If API request fails
- */
 export async function fetchAllStockAlerts() {
-    if (isFrontendOnly()) return [...MOCK_STOCK_ALERTS];
-    const base = apiBase();
-    if (!base) return [];
-    const res = await axios.get(`${base}/products`);
-    // Filtrar productos con stock bajo (current < min)
-    const lowStockProducts = res.data.filter(product => product.current < product.min);
-    return lowStockProducts.map(item => new StockAlert({
-        id: item.id,
-        name: item.name,
-        stock: item.current,
-        minStock: item.min
-    }));
+    const { stock } = partitionAlerts(await fetchRawAlerts());
+    if (isFrontendOnly() && stock.length === 0) return [...MOCK_STOCK_ALERTS];
+    return stock;
 }
 
-/**
- * Fetches expiration alerts with a limit of 3 items
- * @returns {Promise<Array>} Array of expiration alerts
- * @throws {Error} If API request fails
- */
 export async function fetchExpirationAlerts() {
-    try {
-        if (isFrontendOnly()) return MOCK_EXPIRATION_ALERTS.slice(0, 3);
-        const base = apiBase();
-        if (!base) return [];
-        const settings = await getExpirationSettings();
-        const res = await axios.get(`${base}/products`);
-        // Filtrar productos que expiran en los próximos días según la configuración
-        const expiringProducts = res.data.filter(product => {
-            if (!product.expirationDate) return false;
-            const expirationDate = new Date(product.expirationDate);
-            const today = new Date();
-            const daysUntilExpiration = Math.ceil((expirationDate - today) / (1000 * 60 * 60 * 24));
-            return daysUntilExpiration <= settings.expirationAlertMargin && daysUntilExpiration > 0;
-        });
-        return expiringProducts
-            .slice(0, 3)
-            .map(item => new ExpirationAlert({
-                id: item.id,
-                name: item.name,
-                expiresIn: Math.ceil((new Date(item.expirationDate) - new Date()) / (1000 * 60 * 60 * 24))
-            }));
-    } catch (error) {
-        console.error('Error al obtener alertas de expiración:', error);
-        throw error;
-    }
+    const { expiration } = partitionAlerts(await fetchRawAlerts());
+    if (isFrontendOnly() && expiration.length === 0) return MOCK_EXPIRATION_ALERTS.slice(0, 3);
+    return expiration.slice(0, 3);
 }
 
-/**
- * Fetches all expiration alerts without limit
- * @returns {Promise<Array>} Array of all expiration alerts
- * @throws {Error} If API request fails
- */
 export async function fetchAllExpirationAlerts() {
-    try {
-        if (isFrontendOnly()) return [...MOCK_EXPIRATION_ALERTS];
-        const base = apiBase();
-        if (!base) return [];
-        const settings = await getExpirationSettings();
-        const res = await axios.get(`${base}/products`);
-        // Filtrar productos que expiran en los próximos días según la configuración
-        const expiringProducts = res.data.filter(product => {
-            if (!product.expirationDate) return false;
-            const expirationDate = new Date(product.expirationDate);
-            const today = new Date();
-            const daysUntilExpiration = Math.ceil((expirationDate - today) / (1000 * 60 * 60 * 24));
-            return daysUntilExpiration <= settings.expirationAlertMargin && daysUntilExpiration > 0;
-        });
-        return expiringProducts.map(item => new ExpirationAlert({
-            id: item.id,
-            name: item.name,
-            expiresIn: Math.ceil((new Date(item.expirationDate) - new Date()) / (1000 * 60 * 60 * 24))
-        }));
-    } catch (error) {
-        console.error('Error al obtener todas las alertas de expiración:', error);
-        throw error;
-    }
+    const { expiration } = partitionAlerts(await fetchRawAlerts());
+    if (isFrontendOnly() && expiration.length === 0) return [...MOCK_EXPIRATION_ALERTS];
+    return expiration;
+}
+
+export async function fetchAlertCounts() {
+    const { stock, expiration } = partitionAlerts(await fetchRawAlerts());
+    return {
+        lowStock: stock.length,
+        expiring: expiration.length,
+    };
 }

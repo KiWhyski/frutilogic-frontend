@@ -23,7 +23,7 @@
     "role-liquor": "Fruit store owner"
   },
   "toolbar": {
-    "brandSubtitle": "Inventory",
+    "brandSubtitle": "Fruit inventory",
     "expand-contract": "Expand/Contract",
     "dashboard": "Dashboard",
     "inventory": "Inventory",
@@ -105,7 +105,10 @@
   "dashboard": {
     "general-summary": "General Summary",
     "important-notifications": "Important Notifications",
-    "quick-access": "Quick Access"
+    "quick-access": "Quick Access",
+    "warehouse-count": "Warehouses:",
+    "stock-by-product": "Stock by fruit",
+    "empty-products": "No fruits registered yet. Go to Warehouses to set up your inventory."
   },
   "alerts": {
     "title": "Alerts",
@@ -133,7 +136,7 @@
   "orders": {
     "title": "Orders",
     "no-access-title": "Orders unavailable",
-    "no-access-lede": "Your account cannot access purchases or orders. Only store owner or supplier profiles can use this section.",
+    "no-access-lede": "Your account cannot access purchases or orders. Only fruit store owner or supplier profiles can use this section.",
     "new-order": "New Order"
   },
   "products":{
@@ -210,6 +213,10 @@
     "transfer-success-demo": "Simulation: {count} product(s) sent to “{warehouse}”.",
     "transfer-no-targets": "No other warehouse is available. Demo destinations will be used.",
     "transfer-error-no-destinations": "No destination warehouse is available (including demo)."
+  },
+  "catalog": {
+    "content-kg": "Weight per unit (kg)",
+    "col-content": "Weight (kg)"
   },
   "profile": {
     "title": "Profile"

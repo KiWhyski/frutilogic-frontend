@@ -28,7 +28,7 @@ class UserService extends BaseService {
                 profileId: '0',
                 name: 'Demo',
                 email: username,
-                role: 'Liquor Store Owner',
+                role: 'Fruit Store Owner',
             };
             const currentUser = {
                 id: '0',

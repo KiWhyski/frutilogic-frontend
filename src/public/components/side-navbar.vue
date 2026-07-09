@@ -41,7 +41,7 @@ export default {
                 @click="navigate"
               >
                 <span class="sidenav-brand__text">
-                  <span class="sidenav-brand__title">KiWhyski</span>
+                  <span class="sidenav-brand__title">FrutiLogic</span>
                   <span class="sidenav-brand__subtitle">{{ $t('toolbar.brandSubtitle') }}</span>
                 </span>
               </button>
@@ -128,6 +128,19 @@ export default {
                 >
                   <i class="pi pi-camera nav-item__icon" aria-hidden="true"></i>
                   <span class="nav-item__label">{{ $t('Reconocer Imágenes') }}</span>
+                </button>
+              </router-link>
+            </li>
+            <li>
+              <router-link to="/catalog" custom v-slot="{ navigate, isActive }">
+                <button
+                  type="button"
+                  class="nav-item"
+                  :class="{ 'router-link-active': isActive }"
+                  @click="navigate"
+                >
+                  <i class="pi pi-book nav-item__icon" aria-hidden="true"></i>
+                  <span class="nav-item__label">{{ $t('dashboard.access-catalogs') }}</span>
                 </button>
               </router-link>
             </li>

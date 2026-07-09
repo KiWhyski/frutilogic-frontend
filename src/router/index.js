@@ -172,11 +172,6 @@ const routes = [
         props: true
     },
     {
-        path: '/:pathMatch(.*)*',
-        name: 'PageNotFound',
-        component: PageNotFoundComponent
-    },
-    {
         path: '/payments-success',
         name: 'PaymentSuccess',
         component: PaymentSuccessComponent

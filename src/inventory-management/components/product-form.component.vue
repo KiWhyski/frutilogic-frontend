@@ -36,7 +36,7 @@ export default {
         minimumStock: 1,
         imageUrl: '',
       },
-      liquorTypes: [
+      fruitTypes: [
         { label: 'Manzana', value: 'Manzana' },
         { label: 'Plátano', value: 'Plátano' },
         { label: 'Naranja', value: 'Naranja' },
@@ -209,7 +209,7 @@ export default {
         <label>{{ $t('products.liquor-type') }}<span class="important">*</span></label>
         <pv-select
           v-model="product.liquorType"
-          :options="liquorTypes"
+          :options="fruitTypes"
           option-label="label"
           option-value="value"
           :placeholder="$t('products.placeholder-liquor-type')"

@@ -24,7 +24,7 @@
             <InputText class="Input" v-model="newProduct.brand" />
           </div>
           <div class="field">
-            <label>{{ $t('catalog.content-ml') }}</label>
+            <label>{{ $t('catalog.content-kg') }}</label>
             <pv-input-number
                 v-model="newProduct.content"
                 :min="0"
@@ -99,12 +99,11 @@ export default {
     };
 
     const loadCatalog = async () => {
-      const id = Number(route.params.catalogId || 0);
-      if (id > 0) {
+      const id = route.params.catalogId;
+      if (id) {
         isEditMode.value = true;
-        const loaded     = await catalogService.getCatalogById(id);
-        catalog.value    = { ...loaded };
-        console.log('[LOAD] catálogo', catalog.value);
+        const loaded = await catalogService.getCatalogById(String(id));
+        catalog.value = { ...loaded, catalogId: loaded.id };
         await loadCatalogItems();
       }
     };
@@ -122,64 +121,22 @@ export default {
       }
 
       const payload = {
-        ...catalog.value,
-        accountId,
-        name:         catalog.value.name.trim(),
-        dateCreated:  catalog.value.dateCreated || new Date().toISOString(),
-        isPublished:  false
+        name: catalog.value.name.trim(),
+        description: catalog.value.name.trim(),
+        contactEmail: authStore.currentUsername || 'contacto@frutilogic.com',
       };
-
-      console.log(isEditMode.value ? '[UPDATE] payload' : '[CREATE] payload', payload);
 
       try {
         if (isEditMode.value) {
-          await catalogService.updateCatalog(catalog.value.catalogId, payload);
-          console.log('[UPDATE] catálogo OK');
+          await catalogService.updateCatalog(catalog.value.catalogId || catalog.value.id, payload);
         } else {
-          const created   = await catalogService.createCatalog(payload);
-          catalog.value   = { ...created };
+          const created = await catalogService.createCatalog(payload, accountId);
+          catalog.value = { ...created, catalogId: created.id };
           isEditMode.value = true;
-          console.log('[CREATE] catálogo OK', created);
         }
-        await handleCatalogSaveSuccess();
+        alert(isEditMode.value ? 'Catálogo guardado' : 'Catálogo creado');
       } catch (err) {
         console.error('Error saving catalog:', err);
-      }
-    };
-
-    const handleCatalogSaveSuccess = async () => {
-      const values = Object.values(newProduct.value);
-      const hasData = values.some(v => v !== '' && v !== null && v !== 0);
-
-      if (!hasData) {
-        alert(isEditMode.value ? 'Catalog updated' : 'Catalog created');
-        return;
-      }
-
-      const allFilled = values.every(v => v !== '' && v !== null && v !== 0);
-      if (!allFilled) {
-        showError.value = true;
-        return;
-      }
-
-      const itemPayload = {
-        catalogId: catalog.value.catalogId,
-        name: newProduct.value.name,
-        productType: newProduct.value.productType,
-        brand: newProduct.value.brand,
-        content: Number(newProduct.value.content),
-        unitPrice: Number(newProduct.value.price)
-      };
-
-      try {
-        const createdItem = await catalogService.addCatalogItem(itemPayload);
-        catalogItems.value.push(createdItem);
-        resetForm();
-        alert(isEditMode.value ? 'Catalog updated and product added' : 'Catalog created and product added');
-      } catch (err) {
-        const msg = err.response?.data ?? err.message;
-        console.error('Error adding product:', msg);
-        alert('Error al añadir producto: ' + msg);
       }
     };
 

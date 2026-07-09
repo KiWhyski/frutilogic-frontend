@@ -17,7 +17,6 @@
 
 <script>
 import PurchaseOrderListComponent from "@/order-operation-and-monitoring/components/purchase-order-list.component.vue";
-import { PurchaseOrderService } from "@/order-operation-and-monitoring/services/purchase-order.service.js";
 import SideNavbar from "@/public/components/side-navbar.vue";
 import ToolbarContent from "@/public/components/toolbar-content.component.vue";
 
@@ -28,19 +27,10 @@ export default {
     SideNavbar,
     PurchaseOrderListComponent
   },
-  data() {
-    return {
-      orders: []
-    };
-  },
-  async created() {
-    const orderService = new PurchaseOrderService();
-
-    try {
-      const response = await orderService.getAll();
-      this.orders = response;
-    } catch (err) {
-      console.error('Error loading purchase orders', err);
+  props: {
+    orders: {
+      type: Array,
+      default: () => []
     }
   }
 };

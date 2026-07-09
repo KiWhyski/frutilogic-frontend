@@ -1,11 +1,10 @@
 import httpInstance from "@/shared/services/http.instance.js";
 import { normalizeApiPath } from "@/shared/config/backend-url.js";
 import { parseAuthResponse } from "@/authentication/services/auth.session.js";
+import { normalizeAccountRole } from "@/shared/utils/account-role.js";
 
 function mapAccountRole(role) {
-    if (role === 'LiquorStoreOwner') return 'Liquor Store Owner';
-    if (role === 'Supplier') return 'Supplier';
-    return role;
+    return normalizeAccountRole(role) || role;
 }
 
 function extractErrorMessage(error) {
@@ -52,7 +51,7 @@ export class AuthenticationService {
             try {
                 session.accountRole = await this.fetchAccountRole(session.accountId);
             } catch {
-                session.accountRole = 'Liquor Store Owner';
+                session.accountRole = 'Fruit Store Owner';
             }
         }
 

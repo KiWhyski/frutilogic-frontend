@@ -1,55 +1,75 @@
-import axios from 'axios';
 import http from '@/shared/services/http.instance.js';
+import { useAuthenticationStore } from '@/authentication/services/authentication.store.js';
+import { isSupplier } from '@/shared/utils/account-role.js';
 
-const apiUrl = import.meta.env.VITE_API_URL + '/purchase-orders';
+function mapPurchaseOrder(raw) {
+    const items = raw?.items ?? raw?.Items ?? [];
+    return {
+        id: raw?.id ?? raw?.Id ?? '',
+        orderCode: raw?.orderCode ?? raw?.OrderCode ?? '',
+        status: raw?.status ?? raw?.Status ?? '',
+        orderDate: raw?.generationDate ?? raw?.GenerationDate ?? null,
+        date: raw?.generationDate ?? raw?.GenerationDate ?? null,
+        totalAmount: Number(raw?.total ?? raw?.Total ?? 0),
+        totalItems: items.length,
+        catalogIdBuyFrom: raw?.catalogIdBuyFrom ?? raw?.CatalogIdBuyFrom ?? '',
+        items,
+    };
+}
 
-const StatusCode = {
-    Received  : 0,
-    InProcess : 1,
-    Arrived   : 2,
-    Canceled  : 3
-};
+function mapSalesOrder(raw) {
+    return {
+        id: raw?.id ?? raw?.Id ?? '',
+        orderCode: raw?.orderCode ?? raw?.OrderCode ?? raw?.id ?? raw?.Id ?? '',
+        status: raw?.status ?? raw?.Status ?? '',
+        orderDate: raw?.orderDate ?? raw?.OrderDate ?? raw?.createdAt ?? raw?.CreatedAt ?? null,
+        totalAmount: Number(raw?.total ?? raw?.Total ?? raw?.totalAmount ?? 0),
+        totalItems: (raw?.items ?? raw?.Items ?? []).length,
+        items: raw?.items ?? raw?.Items ?? [],
+    };
+}
 
 export class PurchaseOrderService {
-    constructor () {
-        this.baseUrl  = import.meta.env.VITE_BASE_API_URL;
-        this.endpoint = 'orders';
-    }
-    async createPurchaseOrder(order) {
-        const { data } = await http.post('/orders', order);
-        return data;
+    async createPurchaseOrder({ catalogId, orderCode } = {}) {
+        const accountId = useAuthenticationStore().currentAccountId;
+        if (!accountId) throw new Error('Cuenta no encontrada');
+        if (!catalogId) throw new Error('Catálogo requerido');
+
+        const { data } = await http.post(`accounts/${accountId}/purchase-orders`, {
+            orderCode: orderCode || `PO-${Date.now()}`,
+            catalogIdBuyFrom: String(catalogId),
+        });
+        return mapPurchaseOrder(data);
     }
 
     async getAll(filters = {}) {
-        const { buyerAccountId, supplierAccountId, ...rest } = filters;
+        const authStore = useAuthenticationStore();
+        const accountId = filters.buyerAccountId
+            || filters.supplierAccountId
+            || authStore.currentAccountId;
 
-        // -------- endpoint según rol ----------
-        let endpoint = '/orders';
-        if (buyerAccountId) {
-            endpoint = `/orders/buyer/${encodeURIComponent(buyerAccountId)}`;
-        } else if (supplierAccountId) {
-            endpoint = `/orders/supplier/${encodeURIComponent(supplierAccountId)}`;
+        if (!accountId) return [];
+
+        const role = authStore.account?.accountRole;
+
+        if (filters.supplierAccountId || isSupplier(role)) {
+            const { data } = await http.get(`orders/supplier/${accountId}`);
+            return (Array.isArray(data) ? data : []).map(mapSalesOrder);
         }
 
-        // -------- query‑params opcionales -------
-        const params = Object.fromEntries(
-            Object.entries(rest).filter(([_, v]) => v !== undefined && v !== null && v !== '')
-        );
-
-        // -------- llamada http (con interceptor JWT) -------
-        const { data } = await http.get(endpoint, { params });
-        return data;
+        const { data } = await http.get(`accounts/${accountId}/purchase-orders`);
+        return (Array.isArray(data) ? data : []).map(mapPurchaseOrder);
     }
 
-    async updateStatus(orderId, statusInt) {
-        try {
-            const { data } = await http.patch(`/orders/${orderId}/status`, null, {
-                params: { status: statusInt }
-            });
-            return data;          // ← devuelve la orden actualizada
-        } catch (err) {
-            // Propagamos el error para que la vista lo maneje
-            throw err.response?.data ?? err;
-        }
+    async updateStatus(orderId, action) {
+        const actionMap = {
+            0: 'receptions',
+            1: 'confirmations',
+            2: 'shipments',
+            3: 'cancellations',
+        };
+        const path = actionMap[action] ?? 'confirmations';
+        const { data } = await http.put(`purchase-orders/${orderId}/${path}`);
+        return data;
     }
 }
