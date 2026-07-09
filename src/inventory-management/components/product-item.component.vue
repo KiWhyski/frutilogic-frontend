@@ -79,7 +79,22 @@ export default {
       return this.product.brandName;
     },
     displayFruitType() {
-      return this.product.liquorType;
+      const labels = {
+        Apples: 'Manzana',
+        Bananas: 'Plátano',
+        Oranges: 'Naranja',
+        Grapes: 'Uva',
+        Strawberries: 'Fresa',
+        Mangos: 'Mango',
+        Pineapples: 'Piña',
+        Avocados: 'Palta',
+        Blueberries: 'Arándano',
+        Kiwis: 'Kiwi',
+        Pears: 'Pera',
+        Watermelons: 'Sandía',
+        Others: 'Otro',
+      };
+      return labels[this.product.liquorType] || this.product.liquorType;
     },
     displayPrice() {
       const amount = this.product.unitPriceAmount ?? 0;

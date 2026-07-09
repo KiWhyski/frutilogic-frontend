@@ -382,6 +382,8 @@
     "success-created": "¡Producto creado con éxito!",
     "success-updated": "¡Producto actualizado con éxito!",
     "duplicate-product": "No se puede crear un producto con el mismo nombre.",
+    "save-error": "No se pudo guardar el producto. Revisa los datos e inténtalo de nuevo.",
+    "content-kg": "Peso por unidad (kg)",
     "limitMessage": "Estás utilizando {current} de {max} productos permitidos.",
     "search-placeholder": "Buscar por nombre, marca o tipo de fruta…",
     "search-clear": "Limpiar búsqueda",

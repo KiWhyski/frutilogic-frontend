@@ -34,22 +34,23 @@ export default {
         liquorType: '',
         unitPriceAmount: 0,
         minimumStock: 1,
+        content: 1,
         imageUrl: '',
       },
       fruitTypes: [
-        { label: 'Manzana', value: 'Manzana' },
-        { label: 'Plátano', value: 'Plátano' },
-        { label: 'Naranja', value: 'Naranja' },
-        { label: 'Uva', value: 'Uva' },
-        { label: 'Fresa', value: 'Fresa' },
-        { label: 'Mango', value: 'Mango' },
-        { label: 'Piña', value: 'Piña' },
-        { label: 'Palta', value: 'Palta' },
-        { label: 'Arándano', value: 'Arándano' },
-        { label: 'Kiwi', value: 'Kiwi' },
-        { label: 'Pera', value: 'Pera' },
-        { label: 'Sandía', value: 'Sandía' },
-        { label: 'Otro', value: 'Otro' },
+        { label: 'Manzana', value: 'Apples' },
+        { label: 'Plátano', value: 'Bananas' },
+        { label: 'Naranja', value: 'Oranges' },
+        { label: 'Uva', value: 'Grapes' },
+        { label: 'Fresa', value: 'Strawberries' },
+        { label: 'Mango', value: 'Mangos' },
+        { label: 'Piña', value: 'Pineapples' },
+        { label: 'Palta', value: 'Avocados' },
+        { label: 'Arándano', value: 'Blueberries' },
+        { label: 'Kiwi', value: 'Kiwis' },
+        { label: 'Pera', value: 'Pears' },
+        { label: 'Sandía', value: 'Watermelons' },
+        { label: 'Otro', value: 'Others' },
       ],
       brandNames: [
         { label: 'Fruticultores del Sur', value: 'FruticultoresDelSur' },
@@ -90,6 +91,7 @@ export default {
         liquorType: '',
         unitPriceAmount: 0,
         minimumStock: 1,
+        content: 1,
         imageUrl: '',
       };
       this.selectedFile = null;
@@ -109,6 +111,7 @@ export default {
             liquorType: data.liquorType,
             unitPriceAmount: data.unitPriceAmount,
             minimumStock: data.minimumStock,
+            content: data.content || 1,
             imageUrl: data.imageUrl,
           };
           this.existingImageUrl = data.imageUrl || null;
@@ -141,6 +144,16 @@ export default {
       }
     },
     async onSave() {
+      if (!String(this.product.name || '').trim() || !this.product.brandName || !this.product.liquorType) {
+        this.$toast.add({
+          severity: 'warn',
+          summary: this.$t('toast.info'),
+          detail: this.$t('components.complete-data'),
+          life: 3000,
+        });
+        return;
+      }
+
       this.submitting = true;
       const toast = this.$toast;
       try {
@@ -167,11 +180,15 @@ export default {
           this.$router.push({ name: 'ProductList' });
         }
       } catch (error) {
+        const detail = error?.userMessage
+          || error?.response?.data?.detail
+          || (typeof error?.response?.data === 'string' ? error.response.data : null)
+          || this.$t('products.save-error');
         toast.add({
           severity: 'error',
           summary: this.$t('toast.error'),
-          detail: this.$t('products.duplicate-product'),
-          life: 3000,
+          detail,
+          life: 5000,
         });
         console.error('Error saving product:', error);
       } finally {
@@ -225,6 +242,11 @@ export default {
       <div class="form-group">
         <label>{{ $t('products.minimum-stock') }}<span class="important">*</span></label>
         <pv-input-number v-model="product.minimumStock" :min="0" />
+      </div>
+
+      <div class="form-group">
+        <label>{{ $t('products.content-kg') }}</label>
+        <pv-input-number v-model="product.content" :min="0.1" :max-fraction-digits="2" suffix=" kg" />
       </div>
 
       <div class="form-group full-width image-section">

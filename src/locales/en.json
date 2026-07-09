@@ -165,6 +165,8 @@
     "success-created": "Product created successfully!",
     "success-updated": "Product updated successfully!",
     "duplicate-product": "A product with this name already exists.",
+    "save-error": "Could not save the product. Check the details and try again.",
+    "content-kg": "Weight per unit (kg)",
     "limitMessage": "You are using {current} of {max} allowed products.",
     "search-placeholder": "Search by name, brand, or fruit type…",
     "search-clear": "Clear search",
