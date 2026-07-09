@@ -40,7 +40,7 @@ export default {
         return;
       }
 
-      const signInRequest = new SignInRequest(this.username.trim(), this.password);
+      const signInRequest = new SignInRequest(this.username.trim().toLowerCase(), this.password);
       try {
         await this.authenticationStore.signIn(signInRequest, this.$router);
       } catch (error) {
@@ -127,17 +127,6 @@ export default {
             Crear cuenta
           </button>
         </p>
-
-        <div class="divider">{{ $t('sign-in.or') }}</div>
-
-        <div class="social-login">
-          <button type="button" class="social-button">
-            <img src="@/assets/google-icon.svg" alt="Google" />
-          </button>
-          <button type="button" class="social-button">
-            <i class="pi pi-key"></i>
-          </button>
-        </div>
       </form>
     </div>
   </div>

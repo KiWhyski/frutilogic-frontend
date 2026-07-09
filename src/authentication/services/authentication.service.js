@@ -20,40 +20,26 @@ function extractErrorMessage(error) {
 export class AuthenticationService {
     signIn(email, password) {
         return httpInstance.post(normalizeApiPath(import.meta.env.VITE_AUTH_SIGNIN_ENDPOINT || 'sign-in'), {
-            email: String(email).trim(),
+            email: String(email).trim().toLowerCase(),
             password,
         });
     }
 
-    signUp({ email, password, name, businessName, role }) {
+    signUp({ email, password }) {
+        const normalizedEmail = String(email).trim().toLowerCase();
+        const displayName = normalizedEmail.split('@')[0] || 'Usuario';
         return httpInstance.post(normalizeApiPath(import.meta.env.VITE_AUTH_SIGNUP_ENDPOINT || 'sign-up'), {
-            email: String(email).trim(),
+            email: normalizedEmail,
             password,
-            name: name || businessName,
-            businessName: businessName || name,
-            role,
+            name: displayName,
+            businessName: displayName,
+            role: 'LiquorStoreOwner',
         });
     }
 
     async fetchAccountRole(accountId) {
         const response = await httpInstance.get(`accounts/${accountId}`);
         return mapAccountRole(response.data?.role);
-    }
-
-    async ensureFreePlanActivated(accountId) {
-        if (!accountId) return;
-        try {
-            const plansResponse = await httpInstance.get(normalizeApiPath(import.meta.env.VITE_PLAN_ENDPOINT_PATH || 'plans'));
-            const plans = Array.isArray(plansResponse.data) ? plansResponse.data : [];
-            const freePlan = plans.find((plan) => String(plan.planType ?? plan.PlanType).toLowerCase() === 'free');
-            if (!freePlan?.planId) return;
-
-            await httpInstance.post(`accounts/${accountId}/subscriptions`, {
-                selectedPlanId: freePlan.planId,
-            });
-        } catch {
-            // Account may already be active — safe to ignore.
-        }
     }
 
     async completeSignIn(response) {
@@ -76,14 +62,14 @@ export class AuthenticationService {
     async sendRecoveryCode(email) {
         return httpInstance.post(
             normalizeApiPath(import.meta.env.VITE_SEND_RECOVERY_CODE_ENDPOINT || 'users/recovery-code'),
-            { email: String(email).trim() }
+            { email: String(email).trim().toLowerCase() }
         );
     }
 
     async verifyRecoveryCode(email, code) {
         const response = await httpInstance.post(
             normalizeApiPath(import.meta.env.VITE_VERIFY_RECOVERY_CODE_ENDPOINT || 'users/verify-recovery-code'),
-            { email: String(email).trim(), code }
+            { email: String(email).trim().toLowerCase(), code }
         );
         return response.data;
     }
@@ -91,7 +77,7 @@ export class AuthenticationService {
     async resetPassword(email, newPassword) {
         const response = await httpInstance.put(
             normalizeApiPath(import.meta.env.VITE_RESET_PASSWORD_ENDPOINT || 'users/reset-password'),
-            { email: String(email).trim(), newPassword }
+            { email: String(email).trim().toLowerCase(), newPassword }
         );
         return response.data;
     }

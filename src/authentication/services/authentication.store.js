@@ -27,16 +27,8 @@ export const useAuthenticationStore = defineStore('authentication', {
     },
     actions: {
         initializeFromStorage() {
-            const token = localStorage.getItem('token');
-            if (token === 'dev-local-preview-token' || localStorage.getItem('devBypassAuth') === 'true') {
-                clearSession();
-                this.signedIn = false;
-                this.userId = '';
-                this.username = '';
-                return;
-            }
-
             if (!hasValidSession()) {
+                clearSession();
                 this.signedIn = false;
                 this.userId = '';
                 this.username = '';
@@ -55,34 +47,19 @@ export const useAuthenticationStore = defineStore('authentication', {
             this.username = session.username;
         },
 
+        async finishLogin(response, router) {
+            const session = await authenticationService.completeSignIn(response);
+            this.applySession(session);
+            await router.push({ name: 'Dashboard' });
+        },
+
         async signIn(signInRequest, router) {
             try {
                 const response = await authenticationService.signIn(
                     signInRequest.username ?? signInRequest.email,
                     signInRequest.password
                 );
-
-                const session = parseAuthResponse(response.data);
-                if (!session.token) {
-                    throw new Error('El servidor no devolviù un token de sesiùn');
-                }
-
-                localStorage.setItem('token', session.token);
-                this.signedIn = true;
-
-                if (session.accountId) {
-                    await authenticationService.ensureFreePlanActivated(session.accountId);
-                    if (!session.accountRole) {
-                        try {
-                            session.accountRole = await authenticationService.fetchAccountRole(session.accountId);
-                        } catch {
-                            session.accountRole = 'Liquor Store Owner';
-                        }
-                    }
-                }
-
-                this.applySession(session);
-                await router.push({ name: 'Dashboard' });
+                await this.finishLogin(response, router);
             } catch (error) {
                 clearSession();
                 this.signedIn = false;
@@ -93,18 +70,19 @@ export const useAuthenticationStore = defineStore('authentication', {
         },
 
         async signUp(signUpRequest, router) {
-            await authenticationService.signUp({
-                email: signUpRequest.username,
-                password: signUpRequest.password,
-                name: signUpRequest.name ?? signUpRequest.businessName,
-                businessName: signUpRequest.businessName ?? signUpRequest.name,
-                role: signUpRequest.accountRole,
-            });
+            const email = signUpRequest.username ?? signUpRequest.email;
+            const password = signUpRequest.password;
 
-            await this.signIn(
-                { username: signUpRequest.username, password: signUpRequest.password },
-                router
-            );
+            try {
+                const response = await authenticationService.signUp({ email, password });
+                await this.finishLogin(response, router);
+            } catch (error) {
+                clearSession();
+                this.signedIn = false;
+                this.userId = '';
+                this.username = '';
+                throw error;
+            }
         },
 
         async signOut(router) {

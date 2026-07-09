@@ -9,12 +9,12 @@ const SESSION_KEYS = [
 
 export function parseAuthResponse(data) {
     return {
-        id: String(data?.userId ?? data?.id ?? ''),
-        username: String(data?.username ?? data?.email ?? ''),
-        email: String(data?.email ?? data?.username ?? ''),
-        token: String(data?.token ?? ''),
-        accountId: String(data?.accountId ?? ''),
-        accountRole: String(data?.accountRole ?? data?.role ?? ''),
+        id: String(data?.userId ?? data?.UserId ?? data?.id ?? ''),
+        username: String(data?.username ?? data?.Username ?? data?.email ?? data?.Email ?? ''),
+        email: String(data?.email ?? data?.Email ?? data?.username ?? data?.Username ?? ''),
+        token: String(data?.token ?? data?.Token ?? ''),
+        accountId: String(data?.accountId ?? data?.AccountId ?? ''),
+        accountRole: String(data?.accountRole ?? data?.AccountRole ?? data?.role ?? data?.Role ?? ''),
     };
 }
 
@@ -42,5 +42,6 @@ export function clearSession() {
 }
 
 export function hasValidSession() {
-    return Boolean(localStorage.getItem('token'));
+    const token = localStorage.getItem('token');
+    return Boolean(token && token !== 'dev-local-preview-token');
 }
