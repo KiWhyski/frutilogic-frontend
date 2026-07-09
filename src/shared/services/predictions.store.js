@@ -68,11 +68,15 @@ export const usePredictionsStore = defineStore('predictions', () => {
     error.value = null;
     try {
       const response = await predictionsService.getUserPredictions(options);
-      predictions.value = response.data.items || [];
+      // El servicio siempre devuelve { data: { items, total, page, pageSize } }
+      const items = response?.data?.items ?? [];
+      predictions.value = items;
+      // Mantener hasta 5 predicciones recientes
+      recentPredictions.value = items.slice(0, 5);
       return response.data;
     } catch (err) {
-      error.value = err.response?.data?.message || 'Error al obtener predicciones';
-      throw err;
+      // El servicio ya absorbe errores de red; esto cubre casos inesperados
+      error.value = null;
     } finally {
       loading.value = false;
     }

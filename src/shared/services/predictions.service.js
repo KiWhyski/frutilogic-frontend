@@ -7,13 +7,12 @@ import { useAuthenticationStore } from '@/authentication/services/authentication
  */
 class PredictionsService {
   constructor() {
-    this.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+    // En desarrollo: usa URL relativa (proxy de Vite redirige)
+    // En producción: usa URL configurada en .env
+    this.baseURL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '/api/v1' : 'http://localhost:3000/api/v1');
     this.endpoints = {
-      savePrediction: '/predictions',
-      getPredictions: '/predictions',
+      predictions: '/predictions',
       deletePrediction: (id) => `/predictions/${id}`,
-      getUserPredictions: '/predictions/user',
-      getPredictionStats: '/predictions/stats'
     };
   }
 
@@ -27,10 +26,10 @@ class PredictionsService {
    * @returns {Promise<Object>} Respuesta del servidor
    */
   async savePrediction(predictionData) {
+    const authStore = useAuthenticationStore();
     try {
-      const authStore = useAuthenticationStore();
       const response = await axios.post(
-        `${this.baseURL}${this.endpoints.savePrediction}`,
+        `${this.baseURL}${this.endpoints.predictions}`,
         {
           label: predictionData.label,
           confidence: predictionData.confidence,
@@ -46,7 +45,8 @@ class PredictionsService {
           }
         }
       );
-      return response.data;
+      // json-server devuelve el objeto directamente (no envuelto en .data)
+      return { data: response.data };
     } catch (error) {
       console.error('Error saving prediction:', error);
       throw error;
@@ -54,34 +54,46 @@ class PredictionsService {
   }
 
   /**
-   * Obtiene todas las predicciones del usuario autenticado
-   * @param {Object} options - Opciones de paginación y filtrado
-   * @param {number} options.page - Número de página
-   * @param {number} options.pageSize - Cantidad de resultados
-   * @param {string} options.label - Filtrar por etiqueta (opcional)
-   * @returns {Promise<Object>} Lista de predicciones
+   * Obtiene las predicciones del usuario.
+   * Compatible con json-server (?userId=X&_page=N&_limit=N)
+   * y con APIs REST convencionales (/predictions/user?page=N&pageSize=N).
    */
   async getUserPredictions(options = {}) {
+    const authStore = useAuthenticationStore();
+    const page     = Number(options.page     || 1);
+    const pageSize = Number(options.pageSize || 10);
+    const empty    = { data: { items: [], total: 0, page, pageSize } };
+
+    // Estrategia 1: json-server – GET /predictions?userId=X&_page=N&_limit=N
     try {
-      const authStore = useAuthenticationStore();
       const params = new URLSearchParams({
-        page: options.page || 1,
-        pageSize: options.pageSize || 10,
-        ...(options.label && { label: options.label })
+        _page:  page,
+        _limit: pageSize,
+        ...(authStore.user?.id  && { userId:  authStore.user.id }),
+        ...(options.label       && { label:   options.label })
       });
 
       const response = await axios.get(
-        `${this.baseURL}${this.endpoints.getUserPredictions}?${params}`,
-        {
-          headers: {
-            Authorization: `Bearer ${authStore.token}`
-          }
-        }
+        `${this.baseURL}${this.endpoints.predictions}?${params}`,
+        { headers: { Authorization: `Bearer ${authStore.token}` } }
       );
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching user predictions:', error);
-      throw error;
+
+      // json-server devuelve array; APIs REST pueden devolver { items, total }
+      if (Array.isArray(response.data)) {
+        const items = response.data;
+        const total = Number(response.headers?.['x-total-count'] ?? items.length);
+        return { data: { items, total, page, pageSize } };
+      }
+
+      // API REST convencional
+      if (response.data?.items) return response.data;
+
+      return empty;
+    } catch (err) {
+      // 404 o error de red → el módulo de IA sigue funcionando sin historial
+      if (err?.response?.status === 404 || err?.code === 'ERR_NETWORK') return empty;
+      console.error('Error fetching predictions:', err);
+      return empty; // no romper la UI
     }
   }
 
@@ -113,15 +125,11 @@ class PredictionsService {
    * @returns {Promise<void>}
    */
   async deletePrediction(predictionId) {
+    const authStore = useAuthenticationStore();
     try {
-      const authStore = useAuthenticationStore();
       await axios.delete(
         `${this.baseURL}${this.endpoints.deletePrediction(predictionId)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${authStore.token}`
-          }
-        }
+        { headers: { Authorization: `Bearer ${authStore.token}` } }
       );
     } catch (error) {
       console.error('Error deleting prediction:', error);
@@ -182,4 +190,3 @@ class PredictionsService {
 }
 
 export default new PredictionsService();
-
