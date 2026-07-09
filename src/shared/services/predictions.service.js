@@ -12,6 +12,7 @@ class PredictionsService {
     this.baseURL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '/api/v1' : 'http://localhost:3000/api/v1');
     this.endpoints = {
       predictions: '/predictions',
+      userPredictions: '/predictions/user',
       deletePrediction: (id) => `/predictions/${id}`,
     };
   }
@@ -60,9 +61,50 @@ class PredictionsService {
    */
   async getUserPredictions(options = {}) {
     const authStore = useAuthenticationStore();
+    const token = authStore.token || authStore.currentToken;
     const page     = Number(options.page     || 1);
     const pageSize = Number(options.pageSize || 10);
     const empty    = { data: { items: [], total: 0, page, pageSize } };
+
+    // Si no hay sesión/token, no intentamos endpoint protegido.
+    if (!token) return empty;
+
+    // Estrategia 1: API backend – GET /predictions/user?page=N&pageSize=N
+    try {
+      const params = new URLSearchParams({
+        page,
+        pageSize,
+        ...(options.label && { label: options.label })
+      });
+
+      const response = await axios.get(
+        `${this.baseURL}${this.endpoints.userPredictions}?${params}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const payload = response.data;
+      if (Array.isArray(payload)) {
+        return { data: { items: payload, total: payload.length, page, pageSize } };
+      }
+
+      if (payload?.items) {
+        return {
+          data: {
+            items: payload.items,
+            total: Number(payload.total ?? payload.items.length ?? 0),
+            page: Number(payload.page ?? page),
+            pageSize: Number(payload.pageSize ?? pageSize)
+          }
+        };
+      }
+    } catch (err) {
+      // Token inválido/expirado o sin permisos para historial: no romper UI.
+      if (err?.response?.status === 401 || err?.response?.status === 403) return empty;
+      // Si este endpoint no existe en el backend actual, intentamos formato legacy.
+      if (err?.response?.status !== 404) {
+        console.error('Error fetching user predictions:', err);
+      }
+    }
 
     // Estrategia 1: json-server – GET /predictions?userId=X&_page=N&_limit=N
     try {
@@ -75,7 +117,7 @@ class PredictionsService {
 
       const response = await axios.get(
         `${this.baseURL}${this.endpoints.predictions}?${params}`,
-        { headers: { Authorization: `Bearer ${authStore.token}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       // json-server devuelve array; APIs REST pueden devolver { items, total }
@@ -91,7 +133,12 @@ class PredictionsService {
       return empty;
     } catch (err) {
       // 404 o error de red → el módulo de IA sigue funcionando sin historial
-      if (err?.response?.status === 404 || err?.code === 'ERR_NETWORK') return empty;
+      if (
+        err?.response?.status === 401 ||
+        err?.response?.status === 403 ||
+        err?.response?.status === 404 ||
+        err?.code === 'ERR_NETWORK'
+      ) return empty;
       console.error('Error fetching predictions:', err);
       return empty; // no romper la UI
     }

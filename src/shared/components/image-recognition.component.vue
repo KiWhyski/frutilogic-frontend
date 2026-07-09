@@ -306,21 +306,17 @@ async function ensureApiAvailable(showError = false) {
 function startApiHealthMonitoring() {
   if (healthCheckTimer) {
     clearInterval(healthCheckTimer);
-    // Auto-configuración: usa el modelo local por defecto sin intervención del usuario.
-    if (!modelURL.value) modelURL.value = DEFAULT_MODEL_URL;
-    if (!metadataURL.value) metadataURL.value = DEFAULT_METADATA_URL;
-
-    await loadModelWithURLs();
-  } catch (err) {
-    error.value = 'No se pudo iniciar el reconocimiento. Verifica que el modelo por defecto exista en /public/my_model.';
-    console.error('Error initializing model:', err);
-  } finally {
-    loading.value = false;
   }
 
   healthCheckTimer = setInterval(async () => {
     apiHealthy.value = await imageClassificationService.checkHealth();
   }, 10000);
+}
+
+async function initializeModel() {
+  // Mantiene compatibilidad con el flujo anterior de inicialización.
+  if (!modelURL.value) modelURL.value = DEFAULT_MODEL_URL;
+  if (!metadataURL.value) metadataURL.value = DEFAULT_METADATA_URL;
 }
 
 /* ─── Inicializar cámara ─────────────────────────────────────────────────── */
@@ -346,18 +342,6 @@ async function initializeCamera() {
       },
       audio: false
     });
-    model.value = await window.tmImage.load(modelURL.value, metadataURL.value);
-
-    const container = document.getElementById('webcam-container');
-    if (container) container.innerHTML = '';
-
-    webcam.value = new window.tmImage.Webcam(WEBCAM_WIDTH, WEBCAM_HEIGHT, FLIP);
-    await webcam.value.setup();
-    await webcam.value.play();
-
-    document.getElementById('webcam-container').appendChild(webcam.value.canvas);
-
-    modelLoaded.value   = true;
     isRecognizing.value = true;
     if (video.value) {
       video.value.srcObject = stream;
@@ -372,9 +356,6 @@ async function initializeCamera() {
     cameraReady.value = false;
     error.value = err.message || 'Error al acceder a la cámara';
     console.error('Error initializing camera:', err);
-    modelLoaded.value = false;
-    error.value = 'Modelo no disponible. Agrega los archivos exportados de Teachable Machine en /public/my_model.';
-    console.error('Error loading model:', err);
   } finally {
     loading.value = false;
   }
@@ -492,19 +473,23 @@ async function handleImageUpload(event) {
   if (!file) return;
 
   try {
-    if (!modelLoaded.value || !model.value) {
-      await initializeModel();
-    }
-    if (!model.value) {
-      throw new Error('El modelo no está disponible para analizar la imagen');
+    if (!await ensureApiAvailable(true)) {
+      return;
     }
 
     loading.value = true;
     error.value = null;
 
-    const { img, imageBase64 } = await readFileAsImage(file);
-    const predictions = await model.value.predict(img);
-    currentPredictions.value = predictions;
+    const { imageBase64 } = await readFileAsImage(file);
+    uploadedFile.value = file;
+    uploadedImage.value = imageBase64;
+    activeTab.value = 'upload';
+
+    const result = await imageClassificationService.classifyImage(file);
+    currentPredictions.value = [{
+      className: result.className,
+      probability: result.probability
+    }];
 
     if (currentBestPrediction.value) {
       uploadedResult.value = {
@@ -516,8 +501,10 @@ async function handleImageUpload(event) {
         confidence: currentBestPrediction.value.probability,
         imageBase64,
         metadata: {
-          allPredictions: predictions,
-          source: 'file-upload'
+          source: 'file-upload-quick',
+          freshnessStatus: freshnessResult.value?.status || 'unknown',
+          freshnessText: freshnessResult.value?.text || 'Estado no determinado',
+          fileName: file.name
         }
       });
       successMessage.value = `${t('Resultado')}: ${currentBestPrediction.value.className} (${(currentBestPrediction.value.probability * 100).toFixed(1)}%)`;
