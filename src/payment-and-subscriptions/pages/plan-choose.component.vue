@@ -2,7 +2,6 @@
 import { PlanService } from "@/payment-and-subscriptions/services/plan.service.js";
 import PlanList from "@/payment-and-subscriptions/components/plan-list.component.vue";
 import { SubscriptionService } from "@/payment-and-subscriptions/services/subscription.service.js";
-import httpInstance from "@/shared/services/http.instance.js";
 import SideNavbar from "@/public/components/side-navbar.vue";
 import ToolbarContent from "@/public/components/toolbar-content.component.vue";
 
@@ -62,18 +61,12 @@ export default {
       try {
         const accountId = localStorage.getItem("accountId");
         if (accountId) {
-          const response = await httpInstance.get(`/accounts/${accountId}/subscriptions/current-plan`);
-          const d = response.data;
-          this.currentPlanId =
-            typeof d === "string" || typeof d === "number"
-              ? String(d)
-              : (d?.planId ?? d?.planCode ?? null);
-          if (this.currentPlanId && /^free$/i.test(String(this.currentPlanId))) {
-            this.currentPlanId = "plan_free";
-          }
+          const subscriptionService = new SubscriptionService();
+          const data = await subscriptionService.getCurrentSubscription(accountId);
+          this.currentPlanId = data?.planId ?? null;
         }
       } catch (error) {
-        console.error(" Error checking current plan:", error);
+        console.warn("No active subscription yet:", error);
       } finally {
         await this.getAllPlans();
       }
@@ -83,22 +76,17 @@ export default {
       try {
         const accountId = localStorage.getItem("accountId");
         const subscriptionService = new SubscriptionService();
+        const data = await subscriptionService.subscribeToPlan(planId, accountId);
 
-        let data;
-
-        if (this.currentPlanId && this.currentPlanId !== "plan_free") {
-          data = await subscriptionService.upgradeSubscription(planId, accountId);
-        } else {
-          data = await subscriptionService.subscribeToPlan(planId, accountId);
+        if (data?.initPoint) {
+          window.location.href = data.initPoint;
+          return;
         }
 
-        if (data.redirectUrl) {
-          window.location.href = data.redirectUrl;
-        } else {
-          throw new Error(data.message || "Error in subscription.");
-        }
+        this.$router?.push({ name: "Dashboard" });
       } catch (err) {
-        console.error("Error subscribing/upgrading to plan:", err);
+        console.error("Error subscribing to plan:", err);
+        this.error = this.$t("plans-page.load-error");
       }
     },
   },

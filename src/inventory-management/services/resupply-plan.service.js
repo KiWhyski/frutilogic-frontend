@@ -1,8 +1,9 @@
 import axios from 'axios';
 import ResupplyPlan from '../model/resupply-plan.entity.js';
 import { isFrontendOnly } from '@/shared/config/frontend-only.js';
+import { getBackendBaseUrl } from '@/shared/config/backend-url.js';
 
-const API_URL = 'http://localhost:3000';
+const API_URL = getBackendBaseUrl() || import.meta.env.VITE_API_URL;
 
 export default {
   async getAll() {

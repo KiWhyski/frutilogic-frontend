@@ -35,11 +35,14 @@ export class AccountService {
             return { maxProducts: 50, maxWarehouses: 5, limits: [] };
         }
         const accountId = this.getCurrentAccountId();
-        const endpoint = this.accountCurrentBenefitsLimitsEndpoint.replace('{accountId}', accountId);
-
         try {
-            const response = await httpInstance.get(endpoint);
-            return response.data;
+            const response = await httpInstance.get(`accounts/${accountId}/subscriptions`);
+            const data = response.data ?? {};
+            return {
+                maxProducts: data.maxProducts ?? 0,
+                maxWarehouses: data.maxWarehouses ?? 0,
+                limits: [],
+            };
         } catch (error) {
             console.error("Error fetching current account benefits limits:", error);
             throw error;

@@ -1,10 +1,12 @@
 <script>
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import ProfileEdit from './profile-edit.component.vue';
 import SideNavbar from '@/public/components/side-navbar.vue';
 import ToolbarContent from '@/public/components/toolbar-content.component.vue';
 import { useAuthenticationStore } from '@/authentication/services/authentication.store.js';
+import profileService from '@/profile-management/services/profile.service.js';
 import { useI18n } from 'vue-i18n';
+import { isFruitStoreOwner, normalizeAccountRole } from '@/shared/utils/account-role.js';
 
 export default {
   name: 'ProfileComponent',
@@ -17,6 +19,7 @@ export default {
     const fileInput = ref(null);
     const authStore = useAuthenticationStore();
     const { t } = useI18n();
+    const loading = ref(true);
 
     const userData = reactive({
       profileId: 0,
@@ -29,11 +32,27 @@ export default {
     });
 
     const roleLabel = computed(() => {
-      const r = authStore.account?.accountRole ?? '';
-      if (r === 'LiquorStoreOwner') return t('sign-up.role-liquor');
+      const r = normalizeAccountRole(authStore.account?.accountRole ?? userData.role);
+      if (isFruitStoreOwner(r)) return t('sign-up.role-liquor');
       if (r === 'Supplier') return t('sign-up.role-supplier');
       if (r) return r;
       return '—';
+    });
+
+    onMounted(async () => {
+      try {
+        const profile = await profileService.getMyProfile();
+        Object.assign(userData, profile);
+        userData.email = profile.email || authStore.currentUsername || '';
+        userData.role = normalizeAccountRole(authStore.account?.accountRole ?? profile.role);
+      } catch (error) {
+        console.error('Error loading profile:', error);
+        userData.email = authStore.currentUsername || '';
+        userData.name = authStore.currentUsername || '';
+        userData.role = normalizeAccountRole(authStore.account?.accountRole);
+      } finally {
+        loading.value = false;
+      }
     });
 
     const uploadNewPhoto = () => {
@@ -52,6 +71,7 @@ export default {
 
     return {
       userData,
+      loading,
       fileInput,
       uploadNewPhoto,
       onFileSelected,

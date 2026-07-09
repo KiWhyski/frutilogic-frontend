@@ -36,6 +36,20 @@
           >
             📁 {{ $t('Subir Imagen') }}
           </button>
+          <button
+              @click="openFilePicker"
+              :disabled="loading"
+              class="btn btn-outline"
+          >
+            {{ $t('Subir Foto') }}
+          </button>
+          <input
+              ref="fileInputRef"
+              type="file"
+              accept="image/*"
+              class="file-input-hidden"
+              @change="handleImageUpload"
+          />
         </div>
 
         <!-- Tab: Cámara -->
@@ -131,6 +145,13 @@
         <div class="results-card">
           <h3>{{ $t('Predicciones en Tiempo Real') }}</h3>
 
+          <div v-if="uploadedResult" class="uploaded-result">
+            <span class="uploaded-result__title">{{ $t('Resultado de foto subida') }}</span>
+            <span class="uploaded-result__value">
+              {{ uploadedResult.label }} ({{ (uploadedResult.confidence * 100).toFixed(1) }}%)
+            </span>
+          </div>
+
           <div id="label-container" class="predictions-list">
             <div
                 v-for="(prediction, index) in currentPredictions"
@@ -206,6 +227,8 @@ import imageClassificationService from '@/shared/services/image-classification.s
 
 const { t } = useI18n();
 const predictionsStore = usePredictionsStore();
+const DEFAULT_MODEL_URL = import.meta.env.VITE_TM_MODEL_URL || '/my_model/model.js';
+const DEFAULT_METADATA_URL = import.meta.env.VITE_TM_METADATA_URL || '/my_model/metadata.json';
 
 /* ─── Estado de cámara y API ─────────────────────────────────────────────── */
 const video         = ref(null);
@@ -220,6 +243,11 @@ const apiHealthy    = ref(null);
 const activeTab     = ref('camera');
 const uploadedImage = ref(null);
 const uploadedFile  = ref(null);
+const fileInputRef  = ref(null);
+const uploadedResult = ref(null);
+
+const modelURL        = ref('');
+const metadataURL     = ref('');
 
 /* ─── Predicciones ───────────────────────────────────────────────────────── */
 const currentPredictions = ref([]);
@@ -272,13 +300,22 @@ async function ensureApiAvailable(showError = false) {
   if (!healthy && showError) {
     error.value = 'La API de clasificación no está disponible';
   }
-
   return healthy;
 }
 
 function startApiHealthMonitoring() {
   if (healthCheckTimer) {
     clearInterval(healthCheckTimer);
+    // Auto-configuración: usa el modelo local por defecto sin intervención del usuario.
+    if (!modelURL.value) modelURL.value = DEFAULT_MODEL_URL;
+    if (!metadataURL.value) metadataURL.value = DEFAULT_METADATA_URL;
+
+    await loadModelWithURLs();
+  } catch (err) {
+    error.value = 'No se pudo iniciar el reconocimiento. Verifica que el modelo por defecto exista en /public/my_model.';
+    console.error('Error initializing model:', err);
+  } finally {
+    loading.value = false;
   }
 
   healthCheckTimer = setInterval(async () => {
@@ -309,7 +346,19 @@ async function initializeCamera() {
       },
       audio: false
     });
+    model.value = await window.tmImage.load(modelURL.value, metadataURL.value);
 
+    const container = document.getElementById('webcam-container');
+    if (container) container.innerHTML = '';
+
+    webcam.value = new window.tmImage.Webcam(WEBCAM_WIDTH, WEBCAM_HEIGHT, FLIP);
+    await webcam.value.setup();
+    await webcam.value.play();
+
+    document.getElementById('webcam-container').appendChild(webcam.value.canvas);
+
+    modelLoaded.value   = true;
+    isRecognizing.value = true;
     if (video.value) {
       video.value.srcObject = stream;
       video.value.onloadedmetadata = () => {
@@ -323,6 +372,9 @@ async function initializeCamera() {
     cameraReady.value = false;
     error.value = err.message || 'Error al acceder a la cámara';
     console.error('Error initializing camera:', err);
+    modelLoaded.value = false;
+    error.value = 'Modelo no disponible. Agrega los archivos exportados de Teachable Machine en /public/my_model.';
+    console.error('Error loading model:', err);
   } finally {
     loading.value = false;
   }
@@ -412,6 +464,71 @@ async function captureImage() {
     console.error('Error capturing image:', err);
   } finally {
     loading.value = false;
+  }
+}
+
+function openFilePicker() {
+  fileInputRef.value?.click();
+}
+
+function readFileAsImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => resolve({ img, imageBase64: reader.result });
+      img.onerror = () => reject(new Error('No se pudo procesar la imagen seleccionada'));
+      img.src = reader.result;
+    };
+
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo seleccionado'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleImageUpload(event) {
+  const file = event.target?.files?.[0];
+  if (!file) return;
+
+  try {
+    if (!modelLoaded.value || !model.value) {
+      await initializeModel();
+    }
+    if (!model.value) {
+      throw new Error('El modelo no está disponible para analizar la imagen');
+    }
+
+    loading.value = true;
+    error.value = null;
+
+    const { img, imageBase64 } = await readFileAsImage(file);
+    const predictions = await model.value.predict(img);
+    currentPredictions.value = predictions;
+
+    if (currentBestPrediction.value) {
+      uploadedResult.value = {
+        label: currentBestPrediction.value.className,
+        confidence: currentBestPrediction.value.probability
+      };
+      await predictionsStore.savePrediction({
+        label: currentBestPrediction.value.className,
+        confidence: currentBestPrediction.value.probability,
+        imageBase64,
+        metadata: {
+          allPredictions: predictions,
+          source: 'file-upload'
+        }
+      });
+      successMessage.value = `${t('Resultado')}: ${currentBestPrediction.value.className} (${(currentBestPrediction.value.probability * 100).toFixed(1)}%)`;
+      setTimeout(() => { successMessage.value = null; }, 3000);
+    }
+  } catch (err) {
+    error.value = err.message || 'Error al analizar la imagen cargada';
+    console.error('Error uploading image for prediction:', err);
+  } finally {
+    loading.value = false;
+    if (fileInputRef.value) fileInputRef.value.value = '';
   }
 }
 
@@ -573,6 +690,7 @@ onMounted(async () => {
 
   try {
     await predictionsStore.fetchUserPredictions({ pageSize: 5 });
+    await initializeModel();
   } catch (err) {
     // El módulo de clasificación debe seguir funcionando aunque el backend de historial no esté activo.
   }
@@ -834,6 +952,21 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
 }
 
+.btn-outline {
+  background-color: #ffffff;
+  color: #2c3e50;
+  border: 2px solid #d1d5db;
+}
+
+.btn-outline:hover:not(:disabled) {
+  background-color: #f3f4f6;
+  transform: translateY(-2px);
+}
+
+.file-input-hidden {
+  display: none;
+}
+
 .btn-delete {
   width: 30px;
   height: 30px;
@@ -873,6 +1006,29 @@ onUnmounted(() => {
   margin: 0 0 20px;
   font-size: 1.3rem;
   color: #333;
+}
+
+.uploaded-result {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #eef6ff;
+  border: 1px solid #cfe3ff;
+}
+
+.uploaded-result__title {
+  font-size: 0.85rem;
+  color: #1f4f8a;
+  font-weight: 600;
+}
+
+.uploaded-result__value {
+  font-size: 1rem;
+  color: #0f172a;
+  font-weight: 700;
 }
 
 /* ─── Predicciones ───────────────────────────────────────────────────────── */
@@ -1042,7 +1198,6 @@ onUnmounted(() => {
   color: #999;
   font-style: italic;
 }
-
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {

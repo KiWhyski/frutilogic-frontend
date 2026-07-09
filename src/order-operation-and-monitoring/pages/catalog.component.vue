@@ -8,7 +8,7 @@
 
       <CatalogList v-if="isSupplier" :catalogs="catalogs" />
 
-      <CatalogForOrders v-if="isLiquorStoreOwner" :catalogCards="catalogs" />
+      <CatalogForOrders v-if="isFruitStoreOwner" :catalogCards="catalogs" />
     </div>
   </SideNavbar>
 </template>
@@ -19,6 +19,7 @@ import { useRouter } from 'vue-router';
 
 import { useAuthenticationStore } from '@/authentication/services/authentication.store.js';
 import { CatalogService } from '@/order-operation-and-monitoring/services/catalog.service.js';
+import { isFruitStoreOwner as checkFruitStoreOwner, isSupplier as checkSupplier } from '@/shared/utils/account-role.js';
 
 import CatalogList       from '@/order-operation-and-monitoring/components/catalog-list.component.vue';
 import CatalogForOrders  from '@/order-operation-and-monitoring/pages/catalog-for-orders.component.vue';
@@ -42,7 +43,7 @@ export default {
 
     const catalogs          = ref([]);
     const isSupplier        = ref(false);
-    const isLiquorStoreOwner= ref(false);
+    const isFruitStoreOwner = ref(false);
 
     const goToNewCatalog = () => {
       router.push('/catalog/new');
@@ -58,11 +59,11 @@ export default {
       }
 
       try {
-        if (account.accountRole === 'Supplier') {
+        if (checkSupplier(account.accountRole)) {
           isSupplier.value = true;
           catalogs.value   = await catalogService.getCatalogsByAccount(account.accountId);
-        } else if (account.accountRole === 'Liquor Store Owner') {
-          isLiquorStoreOwner.value = true;
+        } else if (checkFruitStoreOwner(account.accountRole)) {
+          isFruitStoreOwner.value = true;
           catalogs.value           = await catalogService.getPublishedCatalogs();
         } else {
           console.warn('Rol no reconocido:', account.accountRole);
@@ -75,7 +76,7 @@ export default {
     return {
       catalogs,
       isSupplier,
-      isLiquorStoreOwner,
+      isFruitStoreOwner,
       goToNewCatalog
     };
   }

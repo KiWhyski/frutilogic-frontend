@@ -1,11 +1,12 @@
 import { BaseService } from '@/shared/services/base.service.js';
 import axios from 'axios';
 import { isFrontendOnly } from '@/shared/config/frontend-only.js';
+import { getBackendBaseUrl, joinApiPath } from '@/shared/config/backend-url.js';
 
 class UserService extends BaseService {
     constructor() {
         super();
-        this.apiUrl            = import.meta.env.VITE_API_URL;
+        this.apiUrl = getBackendBaseUrl() || import.meta.env.VITE_API_URL;
 
         // Rutas específicas del micro‑frontend JSON‑server o API real
         this.resourceEndpoint  = import.meta.env.VITE_USER_ENDPOINT_PATH;      // '/users'
@@ -27,7 +28,7 @@ class UserService extends BaseService {
                 profileId: '0',
                 name: 'Demo',
                 email: username,
-                role: 'Liquor Store Owner',
+                role: 'Fruit Store Owner',
             };
             const currentUser = {
                 id: '0',
@@ -42,7 +43,7 @@ class UserService extends BaseService {
         try {
             // 1) Buscar usuario
             const { data: users } = await axios.get(
-                `${this.apiUrl}${this.resourceEndpoint}`,
+                joinApiPath(this.apiUrl, this.resourceEndpoint),
                 { params: { username, password } }
             );
             if (users.length === 0) return false;
@@ -51,13 +52,13 @@ class UserService extends BaseService {
 
             // 2) Obtener perfil
             const { data: profile } = await axios.get(
-                `${this.apiUrl}${this.profileEndpoint}/${user.profileId}`
+                joinApiPath(this.apiUrl, `${this.profileEndpoint}/${user.profileId}`)
             );
             if (!profile) throw new Error('Profile not found');
 
             // 3) Obtener cuenta (vía e‑mail)
             const { data: accountList } = await axios.get(
-                `${this.apiUrl}${this.accountEndpoint}`,
+                joinApiPath(this.apiUrl, this.accountEndpoint),
                 { params: { email: username } }
             );
             const account = accountList?.length ? accountList[0] : null;
@@ -107,7 +108,7 @@ class UserService extends BaseService {
             };
         }
         try {
-            const { data: profiles } = await axios.get(`${this.apiUrl}${this.profileEndpoint}`, {
+            const { data: profiles } = await axios.get(joinApiPath(this.apiUrl, this.profileEndpoint), {
                 params: { email }
             });
             return profiles.length ? profiles[0] : null;
@@ -125,7 +126,7 @@ class UserService extends BaseService {
             };
         }
         try {
-            const { data: accounts } = await axios.get(`${this.apiUrl}${this.accountEndpoint}`, {
+            const { data: accounts } = await axios.get(joinApiPath(this.apiUrl, this.accountEndpoint), {
                 params: { email }
             });
             return accounts.length ? accounts[0] : null;

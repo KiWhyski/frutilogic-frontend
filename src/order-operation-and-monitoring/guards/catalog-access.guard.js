@@ -1,9 +1,10 @@
 import userService from '@/authentication/services/user.service';
+import { isFruitStoreOwner } from '@/shared/utils/account-role.js';
 
 export function catalogAccessGuard(to, from, next) {
     const profile = userService.getCurrentUserProfile();
 
-    if (profile?.role === 'Liquor Store Owner') {
+    if (isFruitStoreOwner(profile?.role)) {
         next();
     } else {
         next('/unauthorized');

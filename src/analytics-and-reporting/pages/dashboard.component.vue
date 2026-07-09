@@ -3,35 +3,8 @@ import ToolbarContent from '@/public/components/toolbar-content.component.vue';
 import SideNavbar from '@/public/components/side-navbar.vue';
 import Chart from 'primevue/chart';
 import { useRouter } from 'vue-router';
-import { computed } from 'vue';
-
-/** Días hasta la fecha de vencimiento (puede ser negativo si ya venció). */
-function daysUntilExpiry(isoDateStr) {
-  const end = new Date(isoDateStr);
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  end.setHours(0, 0, 0, 0);
-  return Math.round((end - start) / 86400000);
-}
-
-function addDays(base, n) {
-  const d = new Date(base);
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
-}
-
-/**
- * Niveles (de menor a mayor gravedad): bajo → moderado → medio → alto → crítico
- * Colores: verde, amarillo, ámbar, naranja, rojo
- */
-function riskLevelFromDays(days) {
-  if (days < 0) return 'critico';
-  if (days <= 3) return 'critico';
-  if (days <= 10) return 'alto';
-  if (days <= 20) return 'medio';
-  if (days <= 35) return 'moderado';
-  return 'bajo';
-}
+import { computed, onMounted, ref } from 'vue';
+import { loadDashboardData } from '@/analytics-and-reporting/services/dashboard.service.js';
 
 const RISK_SEVERITY = {
   bajo: 0,
@@ -63,90 +36,72 @@ export default {
   },
   setup() {
     const router = useRouter();
+    const loading = ref(true);
+    const summary = ref({
+      productCount: 0,
+      warehouseCount: 0,
+      lowStockCount: 0,
+      expiringCount: 0,
+      stockAlerts: [],
+      expirationAlerts: [],
+      products: [],
+      chartLabels: ['Sin datos'],
+      chartValues: [0],
+    });
 
     const goToDashboard = () => {
       router.push('/dashboard');
     };
 
-    const rotationData = {
-      labels: ['Product A', 'Product B', 'Product C'],
+    const rotationData = computed(() => ({
+      labels: summary.value.chartLabels,
       datasets: [
         {
-          data: [70, 20, 10],
+          data: summary.value.chartValues,
           backgroundColor: ['#B0F2B6', '#F7B2AD', '#E5D3F2']
         }
       ]
-    };
+    }));
 
     const rotationOptions = {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
-        }
-      },
+      plugins: { legend: { display: false } },
       scales: {
         y: {
           beginAtZero: true,
-          max: 100,
-          ticks: {
-            callback: function (value) {
-              return value + '%';
-            }
-          }
+          ticks: { precision: 0 }
         }
       }
     };
 
-    const productsRaw = [
-      {
-        name: 'Manzana Fuji',
-        type: 'Manzana',
-        expiration: addDays(new Date(), 50),
-        currentStock: 20,
-        minStock: 20,
-        price: 20
-      },
-      {
-        name: 'Plátano de seda',
-        type: 'Plátano',
-        expiration: addDays(new Date(), 18),
-        currentStock: 20,
-        minStock: 15,
-        price: 20
-      },
-      {
-        name: 'Fresa orgánica',
-        type: 'Fresa',
-        expiration: addDays(new Date(), 6),
-        currentStock: 10,
-        minStock: 5,
-        price: 35
-      }
-    ];
+    const products = computed(() => summary.value.products);
 
-    const products = computed(() =>
-      productsRaw.map((p) => {
-        const days = daysUntilExpiry(p.expiration);
-        const riskLevel = riskLevelFromDays(days);
-        return { ...p, daysUntilExpiry: days, riskLevel };
-      })
-    );
-
-    const overallExpirationRisk = computed(() =>
-      worstRiskLevel(products.value.map((p) => p.riskLevel))
-    );
+    const overallExpirationRisk = computed(() => {
+      const levels = products.value.map((p) => p.riskLevel);
+      return levels.length ? worstRiskLevel(levels) : 'bajo';
+    });
 
     const riskBadgeClass = (level) => `risk-badge risk-badge--${level}`;
 
+    const formatPrice = (value) =>
+      Number(value || 0).toLocaleString('es-PE', { style: 'currency', currency: 'PEN' });
+
+    onMounted(async () => {
+      summary.value = await loadDashboardData();
+      loading.value = false;
+    });
+
     return {
+      loading,
+      summary,
       goToDashboard,
       rotationData,
       rotationOptions,
       products,
       overallExpirationRisk,
-      riskBadgeClass
+      riskBadgeClass,
+      formatPrice,
     };
   }
 };
@@ -158,6 +113,8 @@ export default {
     <div class="dashboard-main">
       <toolbar-content :pageTitle="$t('dashboard.page-title')" />
       <div class="dashboard-content">
+        <div v-if="loading" class="dashboard-loading">Cargando datos...</div>
+        <template v-else>
         <div class="dashboard-row">
           <div class="dashboard-card resumen resumen-flex">
             <div class="resumen-info">
@@ -165,38 +122,31 @@ export default {
               <ul class="resumen-kpi-list">
                 <li>
                   <span class="resumen-kpi-left">
-                    <span class="resumen-icon resumen-icon--pi" aria-hidden="true"><i class="pi pi-dollar"></i></span>
-                    <span class="resumen-kpi-text">{{ $t('dashboard.sales-today') }}</span>
-                  </span>
-                  <span class="alerts-notify__line-value alerts-notify__line-value--ok">S/. 450.00</span>
-                </li>
-                <li>
-                  <span class="resumen-kpi-left">
-                    <span class="resumen-icon resumen-icon--pi" aria-hidden="true"><i class="pi pi-receipt"></i></span>
-                    <span class="resumen-kpi-text">{{ $t('dashboard.last-invoice') }}</span>
-                  </span>
-                  <span class="alerts-notify__line-value alerts-notify__line-value--ok">24/04/2025</span>
-                </li>
-                <li>
-                  <span class="resumen-kpi-left">
                     <span class="resumen-icon resumen-icon--pi" aria-hidden="true"><i class="pi pi-box"></i></span>
                     <span class="resumen-kpi-text">{{ $t('dashboard.products-in-stock') }}</span>
                   </span>
-                  <span class="alerts-notify__line-value alerts-notify__line-value--ok">142</span>
+                  <span class="alerts-notify__line-value alerts-notify__line-value--ok">{{ summary.productCount }}</span>
+                </li>
+                <li>
+                  <span class="resumen-kpi-left">
+                    <span class="resumen-icon resumen-icon--pi" aria-hidden="true"><i class="pi pi-warehouse"></i></span>
+                    <span class="resumen-kpi-text">{{ $t('dashboard.warehouse-count') }}</span>
+                  </span>
+                  <span class="alerts-notify__line-value alerts-notify__line-value--ok">{{ summary.warehouseCount }}</span>
                 </li>
                 <li>
                   <span class="resumen-kpi-left">
                     <span class="resumen-icon resumen-icon--pi resumen-icon--danger" aria-hidden="true"><i class="pi pi-exclamation-triangle"></i></span>
                     <span class="resumen-kpi-text">{{ $t('dashboard.low-stock') }}</span>
                   </span>
-                  <span class="alerts-notify__line-value danger">7</span>
+                  <span class="alerts-notify__line-value danger">{{ summary.lowStockCount }}</span>
                 </li>
                 <li>
                   <span class="resumen-kpi-left">
                     <span class="resumen-icon resumen-icon--pi resumen-icon--warning" aria-hidden="true"><i class="pi pi-calendar-clock"></i></span>
                     <span class="resumen-kpi-text">{{ $t('dashboard.about-to-expire') }}</span>
                   </span>
-                  <span class="alerts-notify__line-value warning">5</span>
+                  <span class="alerts-notify__line-value warning">{{ summary.expiringCount }}</span>
                 </li>
               </ul>
             </div>
@@ -206,38 +156,42 @@ export default {
           <div class="dashboard-card alerts alerts--with-icons">
             <h2 class="alerts-section-title">{{ $t('dashboard.important-notifications') }}</h2>
 
-            <div class="alerts-notify alerts-notify--danger">
-              <div class="alerts-notify__head">
-                <span class="alerts-notify__badge" aria-hidden="true"><i class="pi pi-exclamation-triangle"></i></span>
-                <span class="alerts-notify__product">Mango Ataulfo premium</span>
+            <template v-if="summary.stockAlerts.length || summary.expirationAlerts.length">
+              <div
+                v-for="alert in summary.stockAlerts.slice(0, 2)"
+                :key="'stock-' + alert.id"
+                class="alerts-notify alerts-notify--danger"
+              >
+                <div class="alerts-notify__head">
+                  <span class="alerts-notify__badge" aria-hidden="true"><i class="pi pi-exclamation-triangle"></i></span>
+                  <span class="alerts-notify__product">{{ alert.name }}</span>
+                </div>
+                <ul class="alerts-notify__lines">
+                  <li>
+                    <span class="alerts-notify__line-left">
+                      <span class="alerts-notify__line-icon" aria-hidden="true"><i class="pi pi-box"></i></span>
+                      <span class="alerts-notify__line-label">{{ $t('dashboard.current-stock') }}</span>
+                    </span>
+                    <span class="alerts-notify__line-value danger">{{ alert.stock }}</span>
+                  </li>
+                </ul>
               </div>
-              <ul class="alerts-notify__lines">
-                <li>
-                  <span class="alerts-notify__line-left">
-                    <span class="alerts-notify__line-icon" aria-hidden="true"><i class="pi pi-box"></i></span>
-                    <span class="alerts-notify__line-label">{{ $t('dashboard.current-stock') }}</span>
-                  </span>
-                  <span class="alerts-notify__line-value danger">5</span>
-                </li>
-                <li>
-                  <span class="alerts-notify__line-left">
-                    <span class="alerts-notify__line-icon" aria-hidden="true"><i class="pi pi-chart-line"></i></span>
-                    <span class="alerts-notify__line-label">{{ $t('dashboard.minimum-stock') }}</span>
-                  </span>
-                  <span class="alerts-notify__line-value alerts-notify__line-value--ok">10</span>
-                </li>
-              </ul>
-            </div>
 
-            <hr class="alerts-sep" />
+              <hr v-if="summary.stockAlerts.length && summary.expirationAlerts.length" class="alerts-sep" />
 
-            <div class="alerts-notify alerts-notify--warning">
-              <div class="alerts-notify__head">
-                <span class="alerts-notify__badge alerts-notify__badge--warn" aria-hidden="true"><i class="pi pi-calendar-clock"></i></span>
-                <span class="alerts-notify__product">Uva Red Globe</span>
+              <div
+                v-for="alert in summary.expirationAlerts.slice(0, 1)"
+                :key="'exp-' + alert.id"
+                class="alerts-notify alerts-notify--warning"
+              >
+                <div class="alerts-notify__head">
+                  <span class="alerts-notify__badge alerts-notify__badge--warn" aria-hidden="true"><i class="pi pi-calendar-clock"></i></span>
+                  <span class="alerts-notify__product">{{ alert.name }}</span>
+                </div>
+                <p class="alerts-notify__expire warning">{{ $t('dashboard.expires-in-days', { days: alert.expiresIn }) }}</p>
               </div>
-              <p class="alerts-notify__expire warning">{{ $t('dashboard.expires-in-days', { days: 8 }) }}</p>
-            </div>
+            </template>
+            <p v-else class="alerts-empty">Sin alertas activas. Todo en orden.</p>
           </div>
         </div>
         <div class="dashboard-access-charts">
@@ -270,7 +224,7 @@ export default {
                   </div>
                 </div>
                 <div class="rotation-card">
-                  <h3>{{ $t('dashboard.chart-lowest-turnover') }}</h3>
+                  <h3>{{ $t('dashboard.stock-by-product') }}</h3>
                   <div class="rotation-chart-wrap">
                     <Chart class="char" type="bar" :data="rotationData" :options="rotationOptions" />
                   </div>
@@ -279,23 +233,23 @@ export default {
             </section>
           </div>
         </div>
+        </template>
       </div>
 
       <!-- Expiration risk table -->
-      <section class="risk">
+      <section v-if="!loading" class="risk">
         <div class="risk-card">
           <h3 class="risk-section-title">
-            {{ $t('dashboard.expiration-risk') }}
+            Inventario y riesgo de stock
             <span :class="riskBadgeClass(overallExpirationRisk)">
               {{ $t('dashboard.risk-level-' + overallExpirationRisk) }}
             </span>
           </h3>
-          <table class="risk-table">
+          <table v-if="products.length" class="risk-table">
             <thead>
             <tr>
               <th>{{ $t('dashboard.table-name') }}</th>
               <th>{{ $t('dashboard.table-type') }}</th>
-              <th>{{ $t('dashboard.table-expiration') }}</th>
               <th>{{ $t('dashboard.table-risk') }}</th>
               <th>{{ $t('dashboard.table-current-stock') }}</th>
               <th>{{ $t('dashboard.table-min-stock') }}</th>
@@ -303,10 +257,9 @@ export default {
             </tr>
             </thead>
             <tbody>
-            <tr v-for="product in products" :key="product.name">
+            <tr v-for="product in products" :key="product.id || product.name">
               <td>{{ product.name }}</td>
               <td>{{ product.type }}</td>
-              <td>{{ product.expiration }}</td>
               <td>
                 <span class="risk-badge risk-badge--compact" :class="'risk-badge--' + product.riskLevel">
                   {{ $t('dashboard.risk-level-' + product.riskLevel) }}
@@ -314,10 +267,11 @@ export default {
               </td>
               <td>{{ product.currentStock }}</td>
               <td>{{ product.minStock }}</td>
-              <td>{{ product.price }}</td>
+              <td>{{ formatPrice(product.price) }}</td>
             </tr>
             </tbody>
           </table>
+          <p v-else class="alerts-empty">{{ $t('dashboard.empty-products') }}</p>
         </div>
       </section>
     </div>
@@ -351,6 +305,12 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+}
+.dashboard-loading,
+.alerts-empty {
+  color: #3d5c48;
+  font-size: 0.95rem;
+  padding: 0.5rem 0;
 }
 .dashboard-row {
   display: flex;

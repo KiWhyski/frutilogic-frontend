@@ -16,6 +16,7 @@ export class SignUpRequest {
         this.username = username;
         this.password = password;
         this.validatePassword = validatePassword;
+        this.name = businessName;
         this.businessName = businessName;
         this.accountRole = accountRole;
     }
